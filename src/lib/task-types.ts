@@ -11,7 +11,7 @@ export type Task = {
   id: string;
   title: string;
   notes: string;
-  projectId: string | null;
+  projectId: string;
   dueDate: string | null;
   dueTime: string | null;
   priority: TaskPriority;
@@ -38,5 +38,3 @@ export type Project = {
   color: ProjectColor;
   stages: ProjectStage[];
 };
-
-export type BuiltInView = 'Inbox' | 'Today' | 'Upcoming' | 'All Tasks' | 'Completed';

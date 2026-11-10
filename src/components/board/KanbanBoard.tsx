@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { CalendarDays, Plus } from 'lucide-react';
 import type { Project, ProjectColor, Task, TaskDraft } from '@/lib/task-types';
-import { projectColors } from '@/lib/project-colors';
-import { AddTaskDialog } from '@/components/add-task-dialog';
+import { AddTaskDialog } from '@/components/tasks/add-task-dialog';
+import { AddStageDialog } from '@/components/board/add-stage-dialog';
+import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 type KanbanBoardProps = {
   project: Project;
@@ -16,8 +15,10 @@ type KanbanBoardProps = {
   tasks: Task[];
   onTaskSelect: (taskId: string) => void;
   onTaskMove: (taskId: string, stageId: string) => void;
-  onAddStage: (name: string, color: ProjectColor) => boolean;
-  onTaskCreate: (task: TaskDraft) => void;
+  onAddStage: (name: string, color: ProjectColor) => Promise<boolean>;
+  onTaskCreate: (task: TaskDraft) => Promise<Task | null>;
+  onProjectSave: (projectId: string, name: string, color: ProjectColor) => Promise<boolean>;
+  onProjectDelete: (projectId: string) => Promise<boolean>;
 };
 
 function taskDate(task: Task) {
@@ -52,78 +53,27 @@ function TaskCard({
   );
 }
 
-export function KanbanBoard({ project, projects, tasks, onTaskSelect, onTaskMove, onAddStage, onTaskCreate }: KanbanBoardProps) {
-  const [addingStage, setAddingStage] = useState(false);
-  const [stageName, setStageName] = useState('');
-  const [stageColor, setStageColor] = useState<ProjectColor>('violet');
-  const [stageError, setStageError] = useState('');
-
-  function submitStage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const name = stageName.trim();
-    if (!name) return;
-    if (!onAddStage(name, stageColor)) {
-      setStageError('A stage with that name already exists.');
-      return;
-    }
-    setStageName('');
-    setStageColor('violet');
-    setStageError('');
-    setAddingStage(false);
-  }
-
-  function closeStageDialog() {
-    setAddingStage(false);
-    setStageName('');
-    setStageColor('violet');
-    setStageError('');
-  }
-
+export function KanbanBoard({ project, projects, tasks, onTaskSelect, onTaskMove, onAddStage, onTaskCreate, onProjectSave, onProjectDelete }: KanbanBoardProps) {
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="mx-auto w-full max-w-6xl">
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem><BreadcrumbLink asChild><Link href="/dashboard">Dashboard</Link></BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem><BreadcrumbLink asChild><Link href="/projects">Projects</Link></BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem><BreadcrumbPage>{project.name}</BreadcrumbPage></BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="mb-5 flex items-center justify-between border-b border-border/70 pb-4">
         <div>
           <h2 className="text-base font-semibold">{project.name} board</h2>
           <p className="mt-1 text-sm text-muted-foreground">Move tasks between stages by dragging them.</p>
         </div>
-        <Dialog open={addingStage} onOpenChange={(open) => {
-          setAddingStage(open);
-          if (!open) { setStageName(''); setStageColor('violet'); setStageError(''); }
-        }}>
-          <DialogTrigger asChild>
-            <Button type="button" variant="outline"><Plus aria-hidden="true" /> Add stage</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add stage</DialogTitle>
-              <DialogDescription>Add a column to the {project.name} board.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={submitStage} className="space-y-4">
-              <div>
-                <label htmlFor="project-stage-name" className="mb-1.5 block text-sm font-medium">Stage name</label>
-                <Input autoFocus id="project-stage-name" placeholder="e.g. Review" value={stageName} onChange={(event) => setStageName(event.target.value)} required />
-              </div>
-              <div>
-                <label htmlFor="project-stage-color" className="mb-1.5 block text-sm font-medium">Stage color</label>
-                <Select value={stageColor} onValueChange={(value: ProjectColor) => setStageColor(value)}>
-                  <SelectTrigger id="project-stage-color" aria-label="Stage color"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {projectColors.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <span className="inline-flex items-center gap-2"><span data-project-color={color.value} className="project-color-dot size-2.5 rounded-full" />{color.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {stageError && <p role="alert" className="text-sm text-destructive">{stageError}</p>}
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={closeStageDialog}>Cancel</Button>
-                <Button type="submit" disabled={!stageName.trim()}>Add stage</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <ProjectSettingsDialog project={project} projects={projects} onSave={onProjectSave} onDelete={onProjectDelete} />
+          <AddStageDialog projectName={project.name} onCreate={onAddStage} />
+        </div>
       </div>
 
       <div className="flex min-h-[60vh] items-start gap-4 overflow-x-auto pb-4">
@@ -159,8 +109,8 @@ export function KanbanBoard({ project, projects, tasks, onTaskSelect, onTaskMove
                 fixedProject
                 onCreate={onTaskCreate}
                 trigger={(
-                  <Button type="button" variant="ghost" size="sm" className="w-full justify-start rounded-sm text-muted-foreground hover:text-foreground">
-                    <Plus aria-hidden="true" /> Add task
+                  <Button type="button" variant="secondary" size="sm" className="w-full hover:bg-muted">
+                    <Plus aria-hidden="true" />Add task
                   </Button>
                 )}
               />
