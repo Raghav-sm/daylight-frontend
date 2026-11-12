@@ -152,10 +152,21 @@
     color: var(--project-color);
     background-color: color-mix(in oklch, var(--project-color) 12%, transparent);
   }
-  .stage-color-header {
-    background-color: color-mix(in oklch, var(--project-color) 25%, var(--card));
-    border-color: color-mix(in oklch, var(--project-color) 50%, var(--border));
-    border-left: 4px solid var(--project-color);
+  [data-kanban-tone="muted"] { --kanban-tone: var(--muted-foreground); }
+  [data-kanban-tone="orange"] { --kanban-tone: var(--project-orange); }
+  [data-kanban-tone="violet"] { --kanban-tone: var(--project-violet); }
+  [data-kanban-tone="blue"] { --kanban-tone: var(--project-blue); }
+  .kanban-column {
+    background-color: color-mix(in oklch, var(--kanban-tone) 10%, var(--card));
+    border-color: color-mix(in oklch, var(--kanban-tone) 22%, var(--border));
+  }
+  .kanban-column-title {
+    color: var(--kanban-tone);
+  }
+  .kanban-count {
+    color: var(--kanban-tone);
+    border-color: color-mix(in oklch, var(--kanban-tone) 40%, var(--border));
+    background-color: var(--card);
   }
 }
 
