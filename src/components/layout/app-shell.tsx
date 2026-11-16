@@ -1,58 +1,175 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { AppSidebar } from '@/components/layout/app-sidebar';
-import { ThemeMenu } from '@/components/layout/theme-menu';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { useWorkspaceData } from '@/providers/workspace-data-provider';
-import type { Project, ProjectColor, Task } from '@/lib/task-types';
+import { useCreateProject, useProjectDetail, useProjectSummaries } from '@/features/projects/data';
+import { useTaskDetail } from '@/features/tasks/data';
+import type { ProjectColor } from '@/features/projects/types';
 
-function AppShellSidebar({
-  projects,
-  tasks,
-  onProjectCreate,
-}: {
-  projects: Project[];
-  tasks: Task[];
-  onProjectCreate: (name: string, color: ProjectColor) => Promise<Project | null>;
-}) {
+function AppShellSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { id, taskId } = useParams<{ id?: string; taskId?: string }>();
-  const selectedTask = tasks.find((task) => task.id === taskId);
-  const activeProjectId = id ?? selectedTask?.projectId ?? null;
+  const { data: summaries = [], isLoading, error, refetch } = useProjectSummaries();
+  const { data: task } = useTaskDetail(taskId);
+  const createProject = useCreateProject();
+
+  const activeProjectId = id ?? task?.projectId ?? null;
+
+  async function handleProjectCreate(name: string, color: ProjectColor) {
+    try {
+      const project = await createProject.mutateAsync({ name, color });
+      router.push(`/projects/${encodeURIComponent(project.id)}`);
+      return project;
+    } catch {
+      return null;
+    }
+  }
+
+  const projectCounts = Object.fromEntries(
+    summaries.map((project) => [project.id, project.incompleteTaskCount]),
+  );
+
+  const statusMessage = error
+    ? {
+      text: error instanceof Error ? error.message : 'Could not load projects.',
+      onRetry: () => void refetch(),
+    }
+    : undefined;
+
+  if (isLoading) {
+    return <SidebarFallback />;
+  }
 
   return (
     <AppSidebar
       activePath={pathname}
       activeProjectId={activeProjectId}
-      projects={projects}
-      projectCounts={Object.fromEntries(
-        projects.map((project) => [
-          project.id,
-          tasks.filter((task) => task.projectId === project.id && !task.completed).length,
-        ]),
-      )}
-      onProjectCreate={onProjectCreate}
+      projects={summaries}
+      projectCounts={projectCounts}
+      onProjectCreate={handleProjectCreate}
+      statusMessage={statusMessage}
     />
   );
 }
 
-function AppShellTitle({ projects, tasks }: { projects: Project[]; tasks: Task[] }) {
+function AppShellBreadcrumbs() {
   const pathname = usePathname();
   const { id, taskId } = useParams<{ id?: string; taskId?: string }>();
-  const selectedTask = tasks.find((task) => task.id === taskId);
-  const activeProjectId = id ?? selectedTask?.projectId ?? null;
-  const selectedProject = projects.find((project) => project.id === activeProjectId);
-  const title =
-    pathname === '/dashboard'
-      ? 'Dashboard'
-      : pathname.startsWith('/tasks/')
-        ? (selectedTask?.title ?? 'Details')
-        : (selectedProject?.name ?? 'Projects');
-  const hideTitle = pathname.startsWith('/tasks/');
+  const { data: task } = useTaskDetail(taskId);
+  const projectId = id ?? task?.projectId;
+  const { data: project } = useProjectDetail(projectId);
 
-  return <h1 className={hideTitle ? 'sr-only' : 'truncate text-lg font-semibold'}>{title}</h1>;
+  if (pathname === '/dashboard') {
+    return (
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem>
+            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
+  if (pathname === '/projects') {
+    return (
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Projects</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
+  if (pathname.startsWith('/projects/') && id) {
+    return (
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">{project?.name ?? 'Project'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
+  if (pathname.startsWith('/tasks/') && taskId) {
+    return (
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="hidden md:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden md:block" />
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/projects">Projects</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem className="min-w-0 max-w-[10rem] sm:max-w-[14rem]">
+            {task?.projectId ? (
+              <BreadcrumbLink asChild>
+                <Link href={`/projects/${encodeURIComponent(task.projectId)}`} className="truncate">
+                  {project?.name ?? 'Project'}
+                </Link>
+              </BreadcrumbLink>
+            ) : (
+              <BreadcrumbPage className="truncate">{project?.name ?? 'Project'}</BreadcrumbPage>
+            )}
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">{task?.title ?? 'Task'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
+  return (
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
+        <BreadcrumbItem>
+          <BreadcrumbPage>Daylight</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
 }
 
 function SidebarFallback() {
@@ -68,56 +185,34 @@ function SidebarFallback() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const { projects, tasks, loading, error, clearError, createProject } = useWorkspaceData();
-
-  async function handleProjectCreate(name: string, color: ProjectColor) {
-    const project = await createProject(name, color);
-    if (project) router.push(`/projects/${encodeURIComponent(project.id)}`);
-    return project;
-  }
-
   return (
     <SidebarProvider defaultOpen>
       <Suspense fallback={<SidebarFallback />}>
-        <AppShellSidebar
-          projects={projects}
-          tasks={tasks}
-          onProjectCreate={handleProjectCreate}
-        />
+        <AppShellSidebar />
       </Suspense>
-      <SidebarInset className="min-h-svh min-w-0 flex-row overflow-hidden bg-background text-foreground">
-        <main className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <SidebarTrigger aria-label="Toggle sidebar" />
-              <Suspense fallback={<h1 className="truncate text-lg font-semibold">Daylight</h1>}>
-                <AppShellTitle projects={projects} tasks={tasks} />
-              </Suspense>
-            </div>
-            <ThemeMenu />
-          </header>
-          <section aria-label="Workspace" className="min-h-0 flex-1 overflow-auto bg-background px-4 py-6 sm:px-8 sm:py-8">
-            {error && (
-              <div
-                role="alert"
-                className="mx-auto mb-4 flex max-w-4xl items-center justify-between gap-4 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-              >
-                <span>{error}</span>
-                <button type="button" className="underline" onClick={clearError}>
-                  Dismiss
-                </button>
-              </div>
+      <SidebarInset className="min-h-svh min-w-0 overflow-hidden">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />
+          <Suspense
+            fallback={(
+              <Breadcrumb className="min-w-0">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Daylight</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
             )}
-            {loading ? (
-              <p className="mx-auto max-w-4xl py-10 text-sm text-muted-foreground">
-                Loading your projects and tasks…
-              </p>
-            ) : (
-              children
-            )}
-          </section>
-        </main>
+          >
+            <AppShellBreadcrumbs />
+          </Suspense>
+        </header>
+        <section
+          aria-label="Workspace"
+          className="min-h-0 flex-1 overflow-auto bg-background px-4 py-4 sm:px-6 sm:py-5"
+        >
+          {children}
+        </section>
       </SidebarInset>
     </SidebarProvider>
   );

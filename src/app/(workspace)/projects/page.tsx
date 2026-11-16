@@ -1,32 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { ProjectCards } from '@/app/(workspace)/projects/_components/project-cards';
 import { ProjectEmptyState } from '@/app/(workspace)/projects/_components/project-empty-state';
 import { ProjectNameCell } from '@/app/(workspace)/projects/_components/project-name-cell';
 import { ProjectRowActions } from '@/app/(workspace)/projects/_components/project-row-actions';
-import { projectTaskCount } from '@/app/(workspace)/projects/_components/project-utils';
 import ProjectsToolbar from '@/app/(workspace)/projects/_components/toolbar';
 import { PageLayout } from '@/components/layout/page-layout';
-import { useWorkspaceData } from '@/providers/workspace-data-provider';
+import { useProjectSummaries } from '@/features/projects/data';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import type { Project } from '@/lib/task-types';
+import type { ProjectSummary } from '@/features/projects/types';
 
 export default function ProjectsPage() {
-  const { projects, tasks } = useWorkspaceData();
+  const { data: projects = [], isLoading, error, refetch } = useProjectSummaries();
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
-  const columns = useMemo<DataTableColumn<Project>[]>(
+  const columns = useMemo<DataTableColumn<ProjectSummary>[]>(
     () => [
       {
         label: 'Project',
@@ -35,15 +25,15 @@ export default function ProjectsPage() {
       },
       {
         label: 'Tasks',
-        fieldName: 'id',
+        fieldName: 'taskCount',
         className: 'text-muted-foreground',
-        formatter: (projectId) => projectTaskCount(tasks, projectId as string),
+        formatter: (_value, row) => row.taskCount,
       },
       {
         label: 'Stages',
-        fieldName: 'stages',
+        fieldName: 'stageCount',
         className: 'text-muted-foreground',
-        formatter: (stages) => (stages as Project['stages']).length,
+        formatter: (stageCount) => stageCount as number,
       },
       {
         label: 'Actions',
@@ -54,36 +44,32 @@ export default function ProjectsPage() {
         formatter: (_value, row) => <ProjectRowActions project={row} />,
       },
     ],
-    [tasks],
+    [],
   );
 
   return (
     <PageLayout
-      breadcrumbs={(
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Projects</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )}
+      maxWidthClassName="max-w-6xl"
       title="Projects"
       subtitle="Your boards and their tasks."
     >
-      {projects.length === 0 ? (
+      {error && (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {error instanceof Error ? error.message : 'Could not load projects.'}{' '}
+          <button type="button" className="underline" onClick={() => void refetch()}>
+            Retry
+          </button>
+        </p>
+      )}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading projects…</p>
+      ) : projects.length === 0 ? (
         <ProjectEmptyState />
       ) : (
         <Tabs value={view} onValueChange={(value) => setView(value === 'table' ? 'table' : 'cards')}>
           <ProjectsToolbar showCreate showViewToggle />
           <TabsContent value="cards">
-            <ProjectCards projects={projects} tasks={tasks} />
+            <ProjectCards projects={projects} />
           </TabsContent>
           <TabsContent value="table">
             <DataTable

@@ -12,22 +12,26 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { BoardColumn } from '@/app/(workspace)/projects/[id]/_components/board-column';
+import { BoardSurface } from '@/components/boards/kanban-view';
 import { TaskCardPreview } from '@/app/(workspace)/projects/[id]/_components/task-card';
-import type { Project, Task, TaskDraft } from '@/lib/task-types';
+import type { Project } from '@/features/projects/types';
+import type { TaskDraft, TaskSummary } from '@/features/tasks/types';
 
 type BoardProps = {
   project: Project;
-  projects: Project[];
-  tasks: Task[];
+  projects: Array<Pick<Project, 'id' | 'name'>>;
+  tasks: TaskSummary[];
+  pendingMoveTaskId?: string | null;
   onTaskSelect: (taskId: string) => void;
   onTaskMove: (taskId: string, stageId: string) => void;
-  onTaskCreate: (task: TaskDraft) => Promise<Task | null>;
+  onTaskCreate: (task: TaskDraft) => Promise<{ id: string } | null>;
 };
 
 export function Board({
   project,
   projects,
   tasks,
+  pendingMoveTaskId = null,
   onTaskSelect,
   onTaskMove,
   onTaskCreate,
@@ -39,7 +43,7 @@ export function Board({
   );
 
   const tasksByStage = useMemo(() => {
-    const map = new Map<string, Task[]>();
+    const map = new Map<string, TaskSummary[]>();
     for (const stage of project.stages) {
       map.set(stage.id, []);
     }
@@ -75,6 +79,7 @@ export function Board({
     const task = tasks.find((item) => item.id === taskId);
     const targetStageId = resolveStageId(over.id);
     if (!task || !targetStageId || task.stageId === targetStageId) return;
+    if (pendingMoveTaskId === taskId) return;
 
     onTaskMove(taskId, targetStageId);
   }
@@ -87,7 +92,7 @@ export function Board({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveTaskId(null)}
     >
-      <div className="flex min-h-[60vh] items-start gap-4 overflow-x-auto pb-4">
+      <BoardSurface>
         {project.stages.map((stage, index) => (
           <BoardColumn
             key={stage.id}
@@ -100,7 +105,7 @@ export function Board({
             onTaskCreate={onTaskCreate}
           />
         ))}
-      </div>
+      </BoardSurface>
       <DragOverlay>
         {activeTask ? (
           <TaskCardPreview task={activeTask} className="w-72 rotate-2 shadow-md" />

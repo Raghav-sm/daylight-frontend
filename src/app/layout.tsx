@@ -3,10 +3,6 @@ import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 
 export const metadata: Metadata = {
   title: "Daylight",
@@ -18,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn('h-full antialiased font-sans', geist.variable)}
+      className="h-full antialiased font-sans"
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Pencil } from 'lucide-react';
-import type { Project, ProjectColor } from '@/lib/task-types';
+import type { Project, ProjectColor } from '@/features/projects/types';
 import { projectColors } from '@/lib/project-colors';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +19,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+type ProjectIdentity = Pick<Project, 'id' | 'name' | 'color'>;
+
 type ProjectSettingsDialogProps = {
-  project: Project;
-  projects: Project[];
+  project: ProjectIdentity;
+  projects: ProjectIdentity[];
   onSave: (projectId: string, name: string, color: ProjectColor) => Promise<boolean>;
   onDelete: (projectId: string) => Promise<boolean>;
   defaultOpen?: boolean;

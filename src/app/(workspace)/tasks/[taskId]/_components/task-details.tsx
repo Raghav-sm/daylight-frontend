@@ -2,7 +2,10 @@
 
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import type { Project, Task } from '@/lib/task-types';
+import { useProjectDetail, useProjectSummaries } from '@/features/projects/data';
+import { useUpdateTask } from '@/features/tasks/data';
+import type { ProjectStage } from '@/features/projects/types';
+import type { SubtaskWrite, Task, TaskUpdatePayload } from '@/features/tasks/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,38 +26,172 @@ import {
 
 type TaskDetailsProps = {
   task: Task;
-  projects: Project[];
-  onSave: (task: Task) => Promise<Task | null>;
-  onDelete: (taskId: string) => void;
+  onDelete: () => Promise<void>;
+  deletePending?: boolean;
+  deleteError?: string | null;
+  onDeleteDialogOpenChange?: (open: boolean) => void;
 };
 
-export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsProps) {
+/** Last placement control the user touched. Determines which field is sent on save. */
+type PlacementIntent =
+  | { kind: 'completion'; completed: boolean }
+  | { kind: 'stage'; stageId: string | null }
+  | { kind: 'auto-transfer' }
+  | null;
+
+function subtasksEqual(a: Task['subtasks'], b: Task['subtasks']) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function namedStageId(stages: ProjectStage[] | undefined, completed: boolean) {
+  const target = completed ? 'completed' : 'to do';
+  return stages?.find((stage) => stage.name.toLowerCase() === target)?.id ?? null;
+}
+
+function buildUpdatePayload(
+  draft: Task,
+  source: Task,
+  placement: PlacementIntent,
+): TaskUpdatePayload {
+  const payload: TaskUpdatePayload = {};
+  const title = draft.title.trim();
+  if (title !== source.title) payload.title = title;
+  if (draft.notes !== source.notes) payload.notes = draft.notes;
+  if (draft.projectId !== source.projectId) payload.projectId = draft.projectId;
+  if (draft.dueDate !== source.dueDate) payload.dueDate = draft.dueDate;
+  if (draft.dueTime !== source.dueTime) payload.dueTime = draft.dueTime;
+  if (draft.priority !== source.priority) payload.priority = draft.priority;
+
+  if (placement?.kind === 'completion') {
+    if (placement.completed !== source.completed) payload.completed = placement.completed;
+  } else if (placement?.kind === 'stage') {
+    if (placement.stageId !== source.stageId) payload.stageId = placement.stageId;
+  }
+  // auto-transfer: omit stageId so the backend assigns by completion
+
+  if (!subtasksEqual(draft.subtasks, source.subtasks)) {
+    payload.subtasks = draft.subtasks.map<SubtaskWrite>((item) => ({
+      id: item.id,
+      title: item.title,
+      completed: item.completed,
+    }));
+  }
+  return payload;
+}
+
+function draftHasChanges(draft: Task, source: Task, placement: PlacementIntent) {
+  return Object.keys(buildUpdatePayload(draft, source, placement)).length > 0;
+}
+
+export function TaskDetails({
+  task,
+  onDelete,
+  deletePending = false,
+  deleteError = null,
+  onDeleteDialogOpenChange,
+}: TaskDetailsProps) {
+  const { data: projectSummaries = [] } = useProjectSummaries();
+  const updateTask = useUpdateTask();
+
   const [draft, setDraft] = useState<Task>(task);
+  const [baseline, setBaseline] = useState<Task>(task);
+  const [trackedTaskId, setTrackedTaskId] = useState(task.id);
+  const [placement, setPlacement] = useState<PlacementIntent>(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  const taskProject = projects.find((project) => project.id === draft.projectId);
+  const {
+    data: draftProject,
+    isLoading: stagesLoading,
+    isError: stagesError,
+    refetch: refetchStages,
+  } = useProjectDetail(draft.projectId);
+
+  const hasChanges = draftHasChanges(draft, baseline, placement);
   const completedSubtasks = draft.subtasks.filter((subtask) => subtask.completed).length;
-  const hasChanges = JSON.stringify(draft) !== JSON.stringify(task);
+
+  if (task.id !== trackedTaskId) {
+    setTrackedTaskId(task.id);
+    setDraft(task);
+    setBaseline(task);
+    setPlacement(null);
+  } else if (!hasChanges && JSON.stringify(task) !== JSON.stringify(baseline)) {
+    setDraft(task);
+    setBaseline(task);
+    setPlacement(null);
+  }
+
+  const displayCompleted =
+    placement?.kind === 'completion'
+      ? placement.completed
+      : placement?.kind === 'stage'
+        ? Boolean(
+            draftProject?.stages.find((stage) => stage.id === placement.stageId)?.name.toLowerCase() ===
+              'completed',
+          )
+        : draft.completed;
+
+  const displayStageId =
+    placement?.kind === 'stage'
+      ? placement.stageId
+      : placement?.kind === 'completion'
+        ? (namedStageId(draftProject?.stages, placement.completed) ?? draft.stageId)
+        : placement?.kind === 'auto-transfer'
+          ? null
+          : draft.stageId;
+  const currentStageIndex = Math.max(
+    0,
+    draftProject?.stages.findIndex((stage) => stage.id === displayStageId) ?? 0,
+  );
+  const currentStageColorIndex = currentStageIndex < 3 ? currentStageIndex : 3 + ((currentStageIndex - 3) % 3);
 
   function updateDraft(changes: Partial<Task>) {
     setDraft((current) => ({ ...current, ...changes }));
     setSaveError('');
   }
 
+  function setCompletion(completed: boolean) {
+    setPlacement({ kind: 'completion', completed });
+    setDraft((current) => ({ ...current, completed }));
+    setSaveError('');
+  }
+
+  function setStage(stageId: string | null) {
+    setPlacement({ kind: 'stage', stageId });
+    const stageName = draftProject?.stages.find((stage) => stage.id === stageId)?.name;
+    const completed = stageName ? stageName.toLowerCase() === 'completed' : draft.completed;
+    setDraft((current) => ({ ...current, stageId, completed }));
+    setSaveError('');
+  }
+
+  function setProject(projectId: string) {
+    setPlacement({ kind: 'auto-transfer' });
+    setDraft((current) => ({ ...current, projectId, stageId: null }));
+    setSaveError('');
+  }
+
   async function saveTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.title.trim()) return;
+    if (!draft.title.trim() || saving || updateTask.isPending) return;
+
+    const payload = buildUpdatePayload(draft, baseline, placement);
+    if (Object.keys(payload).length === 0) return;
+
     setSaving(true);
     setSaveError('');
     try {
-      const saved = await onSave({ ...draft, title: draft.title.trim() });
-      if (saved) setDraft(saved);
-      else setSaveError('Could not save this task. Please try again.');
-    } catch {
-      setSaveError('Could not save this task. Please try again.');
+      const saved = await updateTask.mutateAsync({
+        taskId: task.id,
+        payload,
+        sourceProjectId: baseline.projectId,
+      });
+      setBaseline(saved);
+      setDraft(saved);
+      setPlacement(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this task. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -75,8 +212,23 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
     });
   }
 
+  function handleDeleteDialogChange(open: boolean) {
+    setConfirmDelete(open);
+    onDeleteDialogOpenChange?.(open);
+  }
+
+  async function confirmDeleteTask(event: React.MouseEvent) {
+    event.preventDefault();
+    if (deletePending) return;
+    try {
+      await onDelete();
+    } catch {
+      // Parent keeps dialog open and surfaces deleteError.
+    }
+  }
+
   return (
-    <form id="task-details-form" onSubmit={saveTask} className="space-y-5">
+    <form id="task-details-form" data-stage-color={currentStageColorIndex} onSubmit={saveTask} className="space-y-3">
       <div className="flex flex-wrap items-center justify-end gap-3">
         {saveError && (
           <p role="alert" className="text-sm text-destructive">
@@ -84,34 +236,26 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
           </p>
         )}
         {hasChanges && !saveError && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-        <Button type="submit" size="sm" disabled={!draft.title.trim() || !hasChanges || saving}>
-          {saving ? 'Saving…' : 'Save changes'}
+        <Button type="submit" size="sm" disabled={!draft.title.trim() || !hasChanges || saving || updateTask.isPending}>
+          {saving || updateTask.isPending ? 'Saving…' : 'Save changes'}
         </Button>
       </div>
 
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <Card className="min-w-0 gap-6 rounded-lg p-5 shadow-none sm:p-6">
+        <Card className="min-w-0 gap-6 rounded-xl p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <Checkbox
-              aria-label={draft.completed ? 'Mark task incomplete' : 'Complete task'}
-              className="size-6 rounded-full [&_[data-slot=checkbox-indicator]]:rounded-full"
-              checked={draft.completed}
-              onCheckedChange={(checked) => {
-                const completed = checked === true;
-                updateDraft({
-                  completed,
-                  completedAt: completed ? new Date().toISOString() : null,
-                  stageId:
-                    taskProject?.stages[completed ? taskProject.stages.length - 1 : 0]?.id ?? draft.stageId,
-                });
-              }}
+              aria-label={displayCompleted ? 'Mark task incomplete' : 'Complete task'}
+              className="size-5 rounded-full border-[1.5px] border-[var(--stage)] text-primary data-checked:border-[var(--stage-done)] data-checked:bg-stage-done [&_[data-slot=checkbox-indicator]]:rounded-full"
+              checked={displayCompleted}
+              onCheckedChange={(checked) => setCompletion(checked === true)}
             />
             <label htmlFor="task-title" className="sr-only">
               Task title
             </label>
             <Input
               id="task-title"
-              className="h-auto min-w-0 flex-1 border-transparent bg-transparent px-0 py-1 text-2xl font-semibold tracking-tight shadow-none hover:border-transparent focus-visible:border-ring focus-visible:ring-2 md:text-3xl"
+              className="font-heading h-auto min-w-0 flex-1 border-transparent bg-transparent px-0 py-1 text-[22px] tracking-tight shadow-none hover:border-transparent focus-visible:border-ring focus-visible:ring-2"
               value={draft.title}
               onChange={(event) => updateDraft({ title: event.target.value })}
               placeholder="Task title"
@@ -204,7 +348,7 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
           </section>
         </Card>
 
-        <Card className="min-w-0 gap-0 rounded-lg p-5 shadow-none sm:p-6" aria-labelledby="task-properties-heading">
+        <Card className="min-w-0 gap-0 rounded-xl p-5 sm:p-6" aria-labelledby="task-properties-heading">
           <h2 id="task-properties-heading" className="mb-5 text-sm font-semibold">
             Details
           </h2>
@@ -213,21 +357,12 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
               <label htmlFor="task-project" className="block text-sm font-medium">
                 Project
               </label>
-              <Select
-                value={draft.projectId}
-                onValueChange={(projectId) => {
-                  const nextProject = projects.find((project) => project.id === projectId);
-                  updateDraft({
-                    projectId,
-                    stageId: nextProject?.stages[draft.completed ? nextProject.stages.length - 1 : 0]?.id ?? null,
-                  });
-                }}
-              >
+              <Select value={draft.projectId} onValueChange={setProject}>
                 <SelectTrigger id="task-project">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
+                  {projectSummaries.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
@@ -240,21 +375,45 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
                 Stage
               </label>
               <Select
-                value={draft.stageId ?? 'unassigned'}
-                onValueChange={(stageId) => updateDraft({ stageId: stageId === 'unassigned' ? null : stageId })}
+                value={
+                  placement?.kind === 'auto-transfer'
+                    ? 'auto'
+                    : (displayStageId ?? 'unassigned')
+                }
+                disabled={stagesLoading || !draftProject}
+                onValueChange={(value) => {
+                  if (value === 'auto') return;
+                  setStage(value === 'unassigned' ? null : value);
+                }}
               >
                 <SelectTrigger id="task-stage">
-                  <SelectValue />
+                  <SelectValue placeholder={stagesLoading ? 'Loading stages…' : 'Select stage'} />
                 </SelectTrigger>
                 <SelectContent>
+                  {placement?.kind === 'auto-transfer' && (
+                    <SelectItem value="auto">Assign automatically</SelectItem>
+                  )}
                   <SelectItem value="unassigned">No stage</SelectItem>
-                  {taskProject?.stages.map((stage) => (
+                  {draftProject?.stages.map((stage) => (
                     <SelectItem key={stage.id} value={stage.id}>
                       {stage.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {stagesError && (
+                <p role="alert" className="text-xs text-destructive">
+                  Could not load stages.{' '}
+                  <button type="button" className="underline" onClick={() => void refetchStages()}>
+                    Retry
+                  </button>
+                </p>
+              )}
+              {placement?.kind === 'auto-transfer' && !stagesError && (
+                <p className="text-xs text-muted-foreground">
+                  Stage will be assigned for the destination project when you save.
+                </p>
+              )}
             </div>
             <div className="grid min-w-0 grid-cols-2 gap-2">
               <div className="min-w-0 space-y-1.5">
@@ -309,8 +468,8 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
                     aria-pressed={draft.priority === value}
                     className={
                       draft.priority === value
-                        ? 'min-w-0 bg-card px-1 text-foreground shadow-sm hover:bg-card'
-                        : 'min-w-0 bg-transparent px-1 text-muted-foreground shadow-none hover:bg-background hover:text-foreground'
+                        ? 'min-w-0 border border-border bg-card px-1 text-foreground hover:bg-card'
+                        : 'min-w-0 bg-transparent px-1 text-muted-foreground hover:bg-background hover:text-foreground'
                     }
                     onClick={() => updateDraft({ priority: value })}
                   >
@@ -325,7 +484,7 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
             <p className="text-xs text-muted-foreground">
               Created {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(task.createdAt))}
             </p>
-            <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+            <AlertDialog open={confirmDelete} onOpenChange={handleDeleteDialogChange}>
               <AlertDialogTrigger asChild>
                 <Button type="button" variant="destructive" size="sm">
                   <Trash2 aria-hidden="true" />
@@ -338,10 +497,15 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
                   <AlertDialogDescription>
                     This action cannot be undone. The task and its subtasks will be deleted.
                   </AlertDialogDescription>
+                  {deleteError && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {deleteError}
+                    </p>
+                  )}
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel asChild>
-                    <Button type="button" variant="secondary" size="sm">
+                    <Button type="button" variant="secondary" size="sm" disabled={deletePending}>
                       Cancel
                     </Button>
                   </AlertDialogCancel>
@@ -350,12 +514,10 @@ export function TaskDetails({ task, projects, onSave, onDelete }: TaskDetailsPro
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        onDelete(draft.id);
-                      }}
+                      disabled={deletePending}
+                      onClick={(event) => void confirmDeleteTask(event)}
                     >
-                      Delete task
+                      {deletePending ? 'Deleting…' : 'Delete task'}
                     </Button>
                   </AlertDialogAction>
                 </AlertDialogFooter>

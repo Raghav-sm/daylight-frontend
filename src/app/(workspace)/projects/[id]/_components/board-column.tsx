@@ -5,7 +5,8 @@ import { Circle, CircleCheck, CircleDot, CircleEllipsis, Plus } from 'lucide-rea
 import AddTaskDialogButton from '@/app/(workspace)/projects/[id]/_components/add-task-dialog-button';
 import { TaskCard } from '@/app/(workspace)/projects/[id]/_components/task-card';
 import { Button } from '@/components/ui/button';
-import type { Project, ProjectStage, Task, TaskDraft } from '@/lib/task-types';
+import type { Project, ProjectStage } from '@/features/projects/types';
+import type { TaskDraft, TaskSummary } from '@/features/tasks/types';
 
 const KANBAN_TONES = ['muted', 'orange', 'violet', 'blue'] as const;
 
@@ -32,11 +33,11 @@ function StageIcon({
 type BoardColumnProps = {
   stage: ProjectStage;
   stageIndex: number;
-  tasks: Task[];
+  tasks: TaskSummary[];
   project: Project;
-  projects: Project[];
+  projects: Array<Pick<Project, 'id' | 'name'>>;
   onTaskSelect: (taskId: string) => void;
-  onTaskCreate: (task: TaskDraft) => Promise<Task | null>;
+  onTaskCreate: (task: TaskDraft) => Promise<{ id: string } | null>;
 };
 
 export function BoardColumn({
@@ -54,7 +55,6 @@ export function BoardColumn({
   });
   const count = String(tasks.length).padStart(2, '0');
   const tone = kanbanTone(stageIndex);
-
   return (
     <section
       data-kanban-tone={tone}

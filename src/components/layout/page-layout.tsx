@@ -22,12 +22,12 @@ export function PageLayout({
 }: PageLayoutProps) {
   return (
     <div className={cn('mx-auto w-full', maxWidthClassName, className)}>
-      {breadcrumbs && <div className="mb-6">{breadcrumbs}</div>}
+      {breadcrumbs && <div className="mb-4">{breadcrumbs}</div>}
 
       {(title || subtitle || headerActions) && (
-        <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            {title && <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>}
+            {title && <h2 className="font-heading text-[26px] tracking-tight">{title}</h2>}
             {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
           </div>
           {headerActions && <div className="flex shrink-0 items-center gap-2">{headerActions}</div>}

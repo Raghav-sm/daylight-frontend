@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { projectColors } from '@/lib/project-colors';
-import type { ProjectColor } from '@/lib/task-types';
+import type { ProjectColor } from '@/features/projects/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

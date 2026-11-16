@@ -73,7 +73,7 @@ export function DataTable<T>({
   tableClassName,
 }: DataTableProps<T>) {
   return (
-    <Card className={cn('p-0 shadow-none', className)}>
+    <Card className={cn('p-0', className)}>
       <CardContent className="p-0">
         <Table className={tableClassName}>
           <TableHeader>

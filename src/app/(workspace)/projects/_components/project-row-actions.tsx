@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreHorizontal } from 'lucide-react';
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog';
-import { useWorkspaceData } from '@/providers/workspace-data-provider';
+import {
+  useDeleteProject,
+  useProjectDetail,
+  useProjectSummaries,
+  useUpdateProject,
+} from '@/features/projects/data';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,15 +18,49 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Project } from '@/lib/task-types';
+import type { ProjectSummary } from '@/features/projects/types';
 
-export function ProjectRowActions({ project }: { project: Project }) {
+export function ProjectRowActions({ project }: { project: ProjectSummary }) {
   const router = useRouter();
-  const { projects, updateProject, deleteProject } = useWorkspaceData();
+  const { data: allSummaries = [] } = useProjectSummaries();
+  const { data: projectDetail } = useProjectDetail(project.id);
+  const updateProject = useUpdateProject();
+  const deleteProject = useDeleteProject();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const settingsProject = projectDetail ?? {
+    id: project.id,
+    name: project.name,
+    color: project.color,
+  };
+
+  const projectsForUniqueness = allSummaries.map((item) => ({
+    id: item.id,
+    name: item.name,
+    color: item.color,
+  }));
 
   function openProject() {
     router.push(`/projects/${encodeURIComponent(project.id)}`);
+  }
+
+  async function handleSave(projectId: string, name: string, color: ProjectSummary['color']) {
+    try {
+      await updateProject.mutateAsync({ projectId, changes: { name, color } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleDelete(projectId: string) {
+    if (project.taskCount > 0) return false;
+    try {
+      await deleteProject.mutateAsync(projectId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return (
@@ -43,7 +82,7 @@ export function ProjectRowActions({ project }: { project: Project }) {
           <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>Edit</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            className="text-destructive focus:bg-destructive-soft focus:text-destructive"
             onSelect={() => setSettingsOpen(true)}
           >
             Delete…
@@ -54,15 +93,15 @@ export function ProjectRowActions({ project }: { project: Project }) {
       {settingsOpen && (
         <ProjectSettingsDialog
           key={project.id}
-          project={project}
-          projects={projects}
+          project={settingsProject}
+          projects={projectsForUniqueness}
           defaultOpen
           hideTrigger
           onOpenChange={(open) => {
             if (!open) setSettingsOpen(false);
           }}
-          onSave={updateProject}
-          onDelete={deleteProject}
+          onSave={handleSave}
+          onDelete={handleDelete}
         />
       )}
     </>

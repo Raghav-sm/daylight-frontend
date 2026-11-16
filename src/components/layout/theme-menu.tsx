@@ -2,14 +2,14 @@
 
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const subscribe = () => () => {};
 
 export function ThemeMenu() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
 
   return (
@@ -23,11 +23,15 @@ export function ThemeMenu() {
       <DropdownMenuContent align="end" className="min-w-32">
         <DropdownMenuItem onSelect={() => setTheme('light')}>
           Light
-          {mounted && resolvedTheme === 'light' && <span className="ml-auto text-xs text-muted-foreground">Current</span>}
+          {mounted && theme === 'light' && <Check aria-hidden="true" className="ml-auto size-3.5" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme('dark')}>
           Dark
-          {mounted && resolvedTheme === 'dark' && <span className="ml-auto text-xs text-muted-foreground">Current</span>}
+          {mounted && theme === 'dark' && <Check aria-hidden="true" className="ml-auto size-3.5" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setTheme('system')}>
+          System
+          {mounted && theme === 'system' && <Check aria-hidden="true" className="ml-auto size-3.5" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

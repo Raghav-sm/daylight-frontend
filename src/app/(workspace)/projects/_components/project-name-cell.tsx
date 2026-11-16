@@ -1,6 +1,6 @@
-import type { Project } from '@/lib/task-types';
+import type { ProjectSummary } from '@/features/projects/types';
 
-export function ProjectNameCell({ project }: { project: Project }) {
+export function ProjectNameCell({ project }: { project: ProjectSummary }) {
   return (
     <span className="flex max-w-full items-center gap-2.5 font-medium">
       <span

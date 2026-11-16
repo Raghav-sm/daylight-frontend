@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { ProjectCreateDialog } from '@/components/projects/project-create-dialog';
-import { useWorkspaceData } from '@/providers/workspace-data-provider';
+import { useCreateProject, useProjectSummaries } from '@/features/projects/data';
 import { Button } from '@/components/ui/button';
-import type { ProjectColor } from '@/lib/task-types';
+import type { ProjectColor } from '@/features/projects/types';
 
 type CreateProjectDialogButtonProps = {
   label?: string;
@@ -17,17 +17,27 @@ export default function CreateProjectDialogButton({
   className,
 }: CreateProjectDialogButtonProps) {
   const router = useRouter();
-  const { projects, createProject } = useWorkspaceData();
+  const { data: summaries = [] } = useProjectSummaries();
+  const createProject = useCreateProject();
+
+  const projectsForUniqueness = summaries.map((item) => ({
+    id: item.id,
+    name: item.name,
+  }));
 
   async function handleCreate(name: string, color: ProjectColor) {
-    const project = await createProject(name, color);
-    if (project) router.push(`/projects/${encodeURIComponent(project.id)}`);
-    return project;
+    try {
+      const project = await createProject.mutateAsync({ name, color });
+      router.push(`/projects/${encodeURIComponent(project.id)}`);
+      return project;
+    } catch {
+      return null;
+    }
   }
 
   return (
     <ProjectCreateDialog
-      projects={projects}
+      projects={projectsForUniqueness}
       onCreate={handleCreate}
       trigger={(
         <Button type="button" size="sm" className={className}>

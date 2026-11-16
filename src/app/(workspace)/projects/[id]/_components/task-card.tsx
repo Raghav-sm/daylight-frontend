@@ -1,15 +1,15 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
-import { KanbanCard } from '@/app/(workspace)/projects/[id]/_components/kanban-card';
+import { KanbanCard } from '@/components/boards/kanban-card';
 import { cn } from '@/lib/utils';
-import type { Task } from '@/lib/task-types';
+import type { TaskSummary } from '@/features/tasks/types';
 
 export function TaskCardPreview({
   task,
   className,
 }: {
-  task: Task;
+  task: TaskSummary;
   className?: string;
 }) {
   return <KanbanCard task={task} className={className} />;
@@ -19,7 +19,7 @@ export function TaskCard({
   task,
   onSelect,
 }: {
-  task: Task;
+  task: TaskSummary;
   onSelect: (taskId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({

@@ -1,4 +1,4 @@
-import type { ProjectColor } from '@/lib/task-types';
+import type { ProjectColor } from '@/features/projects/types';
 
 export const projectColors: { name: string; value: ProjectColor }[] = [
   { name: 'Red', value: 'red' },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent, type ReactNode } from 'react';
-import type { Project, ProjectColor } from '@/lib/task-types';
+import type { Project, ProjectColor } from '@/features/projects/types';
 import { projectColors } from '@/lib/project-colors';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ProjectCreateDialogProps = {
-  projects: Project[];
+  projects: Array<Pick<Project, 'id' | 'name'>>;
   trigger: ReactNode;
-  onCreate: (name: string, color: ProjectColor) => Promise<Project | null>;
+  onCreate: (name: string, color: ProjectColor) => Promise<{ id: string } | null>;
 };
 
 export function ProjectCreateDialog({ projects, trigger, onCreate }: ProjectCreateDialogProps) {

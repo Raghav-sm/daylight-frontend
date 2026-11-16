@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Plus } from 'lucide-react';
-import type { Project, Task, TaskDraft } from '@/lib/task-types';
+import type { Project } from '@/features/projects/types';
+import type { TaskDraft } from '@/features/tasks/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,12 +19,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 
 type AddTaskDialogButtonProps = {
-  projects: Project[];
+  projects: Array<Pick<Project, 'id' | 'name'>>;
   defaultProjectId: string | null;
   defaultStageId?: string | null;
   fixedProject?: boolean;
   trigger?: ReactNode;
-  onCreate: (task: TaskDraft) => Promise<Task | null> | void;
+  onCreate: (task: TaskDraft) => Promise<{ id: string } | null> | void;
 };
 
 export default function AddTaskDialogButton({
