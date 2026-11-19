@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
-import { QueryProvider } from '@/providers/query-provider';
 import { AppShell } from '@/components/layout/app-shell';
+import { WorkspaceAuthGate } from '@/components/auth/workspace-auth-gate';
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
-  return (
-    <QueryProvider>
-      <AppShell>{children}</AppShell>
-    </QueryProvider>
-  );
+  return <WorkspaceAuthGate><AppShell>{children}</AppShell></WorkspaceAuthGate>;
 }

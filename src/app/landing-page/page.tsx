@@ -7,7 +7,7 @@ import { IntegrationSection } from './_components/integration-section';
 import { FaqSection } from './_components/faq-section';
 import { CallToActionSection } from './_components/call-to-action-section';
 import { LandingFooter } from './_components/landing-footer';
-import styles from './landing-page.module.css';
+import './landing-page.css';
 
 export const metadata: Metadata = {
   title: 'Daylight — A clear space for your tasks',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className={`${styles.entrance} min-h-screen bg-background text-foreground`}>
+    <main className="landing-entrance min-h-screen bg-background text-foreground">
       <LandingHeader />
       <HeroSection />
       <ProductPreviewSection />

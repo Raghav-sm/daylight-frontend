@@ -1,16 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { FolderKanban, LayoutDashboard, Monitor, Moon, Plus, Sun } from 'lucide-react';
+import { FolderKanban, LayoutDashboard, LogOut, Monitor, Moon, Plus, Sun, UserRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useSyncExternalStore } from 'react';
 import type { ProjectColor, ProjectSummary } from '@/features/projects/types';
 import { ProjectCreateDialog } from '@/components/projects/project-create-dialog';
 import { LogoMark } from '@/components/layout/logo-mark';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -34,65 +41,24 @@ type AppSidebarProps = {
   activeProjectId: string | null;
   projects: ProjectSummary[];
   projectCounts: Record<string, number>;
+  userName?: string;
+  userEmail?: string;
+  onLogout?: () => void;
+  logoutPending?: boolean;
+  logoutError?: string;
   onProjectCreate: (name: string, color: ProjectColor) => Promise<{ id: string } | null>;
   statusMessage?: { text: string; onRetry: () => void };
   preview?: boolean;
 };
 
-const subscribe = () => () => {};
-
-function ThemeFooter() {
-  const { theme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
-  const label = !mounted
-    ? 'Theme'
-    : theme === 'light'
-      ? 'Light'
-      : theme === 'dark'
-        ? 'Dark'
-        : 'System';
-  const Icon = !mounted
-    ? Monitor
-    : theme === 'light'
-      ? Sun
-      : theme === 'dark'
-        ? Moon
-        : Monitor;
-
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              className="aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
-              tooltip="Theme"
-            >
-              <Icon aria-hidden="true" />
-              <span className="truncate">Theme</span>
-              <span className="ml-auto text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
-                {label}
-              </span>
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="min-w-40">
-            <DropdownMenuItem onSelect={() => setTheme('light')}>
-              <Sun aria-hidden="true" />
-              Light
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setTheme('dark')}>
-              <Moon aria-hidden="true" />
-              Dark
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setTheme('system')}>
-              <Monitor aria-hidden="true" />
-              System
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
+function getInitials(name: string) {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+  return initials || <UserRound aria-hidden="true" />;
 }
 
 export function AppSidebar({
@@ -100,10 +66,17 @@ export function AppSidebar({
   activeProjectId,
   projects,
   projectCounts,
+  userName = 'User',
+  userEmail = '',
+  onLogout = () => {},
+  logoutPending = false,
+  logoutError,
   onProjectCreate,
   statusMessage,
   preview = false,
 }: AppSidebarProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <Sidebar
       collapsible={preview ? 'none' : 'icon'}
@@ -117,7 +90,7 @@ export function AppSidebar({
               <Link href="/dashboard">
                 <span
                   aria-hidden="true"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                  className="flex size-8 shrink-0 items-center justify-center"
                 >
                   <LogoMark size={16} />
                 </span>
@@ -208,8 +181,70 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
+        {!preview && userEmail && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    className="aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground"
+                    tooltip={userName}
+                  >
+                    <Avatar size="sm">
+                      <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate group-data-[collapsible=icon]:hidden">{userName}</span>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-56">
+                  <DropdownMenuLabel className="flex flex-col gap-0.5">
+                    <span className="truncate font-medium">{userName}</span>
+                    <span className="truncate text-xs font-normal text-muted-foreground">{userEmail}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account">
+                      <UserRound aria-hidden="true" />
+                      Account
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Sun aria-hidden="true" />
+                      Appearance
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup
+                        value={theme === 'light' || theme === 'dark' ? theme : 'system'}
+                        onValueChange={(value) => setTheme(value)}
+                      >
+                        <DropdownMenuRadioItem value="light">
+                          <Sun aria-hidden="true" />
+                          Light
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="dark">
+                          <Moon aria-hidden="true" />
+                          Dark
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="system">
+                          <Monitor aria-hidden="true" />
+                          System
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={onLogout} disabled={logoutPending}>
+                    <LogOut aria-hidden="true" />
+                    {logoutPending ? 'Signing out…' : 'Sign out'}
+                  </DropdownMenuItem>
+                  {logoutError && <p role="alert" className="px-2 py-1 text-xs text-destructive">{logoutError}</p>}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <SidebarSeparator className="mx-0" />
-        <ThemeFooter />
       </SidebarFooter>
     </Sidebar>
   );

@@ -1,0 +1,42 @@
+.landing-entrance {
+  position: relative;
+  isolation: isolate;
+  animation: landing-page-enter 650ms ease-out both;
+}
+
+.landing-entrance::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: max(100svh, 680px);
+  z-index: 0;
+  background: url('/daylight-hero-light.png') center top / cover no-repeat;
+  opacity: .68;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%);
+  pointer-events: none;
+}
+
+.landing-hero-scene {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .landing-entrance::before {
+  background-image: url('/daylight-hero-dark.png');
+}
+
+@media (min-width: 640px) {
+  .landing-entrance::before {
+    background-size: 110% auto;
+  }
+}
+
+@keyframes landing-page-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-entrance { animation: none; }
+}

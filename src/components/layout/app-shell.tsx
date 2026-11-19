@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { useCreateProject, useProjectDetail, useProjectSummaries } from '@/features/projects/data';
+import { useCurrentUser, useLogout } from '@/features/auth/data';
 import { useTaskDetail } from '@/features/tasks/data';
 import type { ProjectColor } from '@/features/projects/types';
 
@@ -24,6 +25,8 @@ function AppShellSidebar() {
   const { data: summaries = [], isLoading, error, refetch } = useProjectSummaries();
   const { data: task } = useTaskDetail(taskId);
   const createProject = useCreateProject();
+  const currentUser = useCurrentUser();
+  const logout = useLogout();
 
   const activeProjectId = id ?? task?.projectId ?? null;
 
@@ -34,6 +37,15 @@ function AppShellSidebar() {
       return project;
     } catch {
       return null;
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await logout.mutateAsync();
+      router.replace('/login');
+    } catch {
+      // Keep the current session visible if the server could not revoke it.
     }
   }
 
@@ -58,6 +70,11 @@ function AppShellSidebar() {
       activeProjectId={activeProjectId}
       projects={summaries}
       projectCounts={projectCounts}
+      userName={currentUser.data?.user.name ?? 'User'}
+      userEmail={currentUser.data?.user.email ?? ''}
+      onLogout={() => void handleLogout()}
+      logoutPending={logout.isPending}
+      logoutError={logout.isError ? 'Sign out failed. Try again.' : undefined}
       onProjectCreate={handleProjectCreate}
       statusMessage={statusMessage}
     />
@@ -77,6 +94,24 @@ function AppShellBreadcrumbs() {
         <BreadcrumbList className="flex-nowrap">
           <BreadcrumbItem>
             <BreadcrumbPage>Dashboard</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
+  if (pathname === '/account') {
+    return (
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="hidden sm:inline-flex">
+            <BreadcrumbLink asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Account</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
