@@ -5,21 +5,42 @@ import { projectsApi } from '@/features/projects/api';
 import type { ProjectColor } from '@/features/projects/types';
 
 export const projectKeys = {
-  all: ['projects'] as const,
-  summaries: () => [...projectKeys.all, 'summaries'] as const,
-  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  list: () => ['projects', 'list'],
+  byId: (id: string) => ['projects', id],
 };
 
-export function useProjectSummaries() {
+type CreateProjectInput = {
+  name: string;
+  color: ProjectColor;
+};
+
+type UpdateProjectInput = {
+  projectId: string;
+  changes: { name?: string; color?: ProjectColor; initialStageId?: string; finalStageId?: string };
+};
+
+type AddStageInput = {
+  projectId: string;
+  name: string;
+  color: ProjectColor;
+};
+
+type DeleteStageInput = {
+  projectId: string;
+  stageId: string;
+  targetStageId?: string;
+};
+
+export function useProjects() {
   return useQuery({
-    queryKey: projectKeys.summaries(),
+    queryKey: projectKeys.list(),
     queryFn: ({ signal }) => projectsApi.getSummaries(signal),
   });
 }
 
-export function useProjectDetail(id: string | undefined) {
+export function useProject(id: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.detail(id ?? ''),
+    queryKey: projectKeys.byId(id ?? ''),
     queryFn: ({ signal }) => projectsApi.getById(id!, signal),
     enabled: Boolean(id),
   });
@@ -28,11 +49,11 @@ export function useProjectDetail(id: string | undefined) {
 export function useCreateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, color }: { name: string; color: ProjectColor }) =>
-      projectsApi.create(name, color),
+    mutationFn: (input: CreateProjectInput) => projectsApi.create(input.name, input.color),
     onSuccess: (project) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.summaries() });
-      queryClient.setQueryData(projectKeys.detail(project.id), project);
+      const projectCacheKey = projectKeys.byId(project.id);
+      queryClient.setQueryData(projectCacheKey, project);
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
     },
   });
 }
@@ -40,16 +61,13 @@ export function useCreateProject() {
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      projectId,
-      changes,
-    }: {
-      projectId: string;
-      changes: { name?: string; color?: ProjectColor };
-    }) => projectsApi.update(projectId, changes),
+    mutationFn: (input: UpdateProjectInput) => projectsApi.update(input.projectId, input.changes),
     onSuccess: (project) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.summaries() });
-      queryClient.setQueryData(projectKeys.detail(project.id), project);
+      const projectCacheKey = projectKeys.byId(project.id);
+      queryClient.setQueryData(projectCacheKey, project);
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'project', project.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
     },
   });
 }
@@ -59,8 +77,9 @@ export function useDeleteProject() {
   return useMutation({
     mutationFn: (projectId: string) => projectsApi.delete(projectId),
     onSuccess: (_data, projectId) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.summaries() });
-      queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) });
+      const projectCacheKey = projectKeys.byId(projectId);
+      queryClient.removeQueries({ queryKey: projectCacheKey });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
     },
   });
 }
@@ -68,18 +87,35 @@ export function useDeleteProject() {
 export function useAddStage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      projectId,
-      name,
-      color,
-    }: {
-      projectId: string;
-      name: string;
-      color: ProjectColor;
-    }) => projectsApi.createStage(projectId, name, color),
-    onSuccess: (_stage, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.summaries() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+    mutationFn: (input: AddStageInput) =>
+      projectsApi.createStage(input.projectId, input.name, input.color),
+    onSuccess: (_stage, input) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.byId(input.projectId) });
+    },
+  });
+}
+
+export function useDeleteStage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DeleteStageInput) =>
+      projectsApi.deleteStage(input.projectId, input.stageId, input.targetStageId),
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.byId(input.projectId) });
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'project', input.projectId] });
+    },
+  });
+}
+
+export function useReorderStages() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { projectId: string; stageIds: string[] }) =>
+      projectsApi.reorderStages(input.projectId, input.stageIds),
+    onSuccess: (project) => {
+      queryClient.setQueryData(projectKeys.byId(project.id), project);
     },
   });
 }

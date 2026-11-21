@@ -80,6 +80,7 @@ export function IntegrationSection() {
     <section
       ref={root}
       id="integrations"
+      data-visible={visible}
       className="mx-auto grid w-full max-w-[1080px] items-center gap-8 px-5 pb-16 pt-2 sm:px-8 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-8 lg:px-10 lg:pb-20 lg:pt-0"
     >
       <div>

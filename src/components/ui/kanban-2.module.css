@@ -1,0 +1,17 @@
+.newTask {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: grid-template-rows 640ms cubic-bezier(.2,.75,.2,1), opacity 420ms ease, transform 640ms cubic-bezier(.2,.75,.2,1);
+}
+
+.newTask[data-added='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newTask { transition: none; }
+}

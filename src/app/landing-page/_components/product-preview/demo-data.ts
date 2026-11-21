@@ -5,6 +5,8 @@ export const demoProject: Project = {
   id: 'demo-project',
   name: 'Product launch',
   color: 'orange',
+  initialStageId: 'todo',
+  finalStageId: 'done',
   stages: [
     { id: 'todo', name: 'To Do', color: 'orange' },
     { id: 'progress', name: 'In Progress', color: 'orange' },

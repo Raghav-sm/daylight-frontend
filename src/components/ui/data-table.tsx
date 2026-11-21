@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -26,12 +28,17 @@ export type DataTableColumn<T> = {
 
 type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
-  data: T[];
+  data?: T[];
   getRowId: (row: T) => string;
   getRowHref?: (row: T) => string | undefined;
-  emptyMessage?: string;
+  isLoading?: boolean;
+  loadingRows?: number;
+  error?: unknown;
+  onRetry?: () => void;
+  emptyMessage?: ReactNode;
   className?: string;
   tableClassName?: string;
+  surface?: 'card' | 'transparent';
 };
 
 const emptyFallback = <span className="text-muted-foreground">—</span>;
@@ -65,15 +72,22 @@ function renderCellContent<T>(column: DataTableColumn<T>, row: T): ReactNode {
 
 export function DataTable<T>({
   columns,
-  data,
+  data = [],
   getRowId,
   getRowHref,
+  isLoading = false,
+  loadingRows = 4,
+  error,
+  onRetry,
   emptyMessage = 'No results.',
   className,
   tableClassName,
+  surface = 'card',
 }: DataTableProps<T>) {
+  const errorMessage = error instanceof Error ? error.message : 'Something went wrong.';
+
   return (
-    <Card className={cn('p-0', className)}>
+    <Card className={cn('p-0', surface === 'transparent' && 'border border-border bg-transparent shadow-none ring-0', className)}>
       <CardContent className="p-0">
         <Table className={tableClassName}>
           <TableHeader>
@@ -89,7 +103,41 @@ export function DataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: loadingRows }, (_, rowIndex) => (
+                <TableRow key={`loading-row-${rowIndex}`}>
+                  {columns.map((column) => (
+                    <TableCell
+                      key={`${column.fieldName}-${column.label}`}
+                      className={column.className}
+                    >
+                      <Skeleton
+                        className={cn(
+                          'h-4',
+                          column.type === 'ACTIONS' ? 'ml-auto w-8' : 'w-24',
+                        )}
+                      />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div
+                    role="alert"
+                    className="flex flex-wrap items-center justify-center gap-3 text-sm text-destructive"
+                  >
+                    <span>{errorMessage}</span>
+                    {onRetry && (
+                      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
                   {emptyMessage}

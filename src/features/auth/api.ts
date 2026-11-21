@@ -10,7 +10,7 @@ export const authApi = {
   async register(credentials: RegistrationCredentials) {
     const response = await request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      body: credentials,
     });
     setCsrfToken(response.csrfToken);
     return response;
@@ -19,7 +19,7 @@ export const authApi = {
   async login(credentials: LoginCredentials) {
     const response = await request<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      body: credentials,
     });
     setCsrfToken(response.csrfToken);
     return response;
@@ -34,7 +34,7 @@ export const authApi = {
   async updateProfile(changes: ProfileUpdate) {
     const response = await request<AuthResponse>('/auth/me', {
       method: 'PATCH',
-      body: JSON.stringify(changes),
+      body: changes,
     });
     setCsrfToken(response.csrfToken);
     return response;

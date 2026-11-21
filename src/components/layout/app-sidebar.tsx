@@ -1,11 +1,12 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import Link from 'next/link';
-import { FolderKanban, LayoutDashboard, LogOut, Monitor, Moon, Plus, Sun, UserRound } from 'lucide-react';
+import { ChevronsUpDown, FolderKanban, LayoutDashboard, LogOut, Monitor, Moon, Plus, Sparkles, Sun, UserRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { ProjectColor, ProjectSummary } from '@/features/projects/types';
 import { ProjectCreateDialog } from '@/components/projects/project-create-dialog';
-import { LogoMark } from '@/components/layout/logo-mark';
+import { Logo } from '@/components/layout/logo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -33,7 +34,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 type AppSidebarProps = {
@@ -49,16 +50,16 @@ type AppSidebarProps = {
   onProjectCreate: (name: string, color: ProjectColor) => Promise<{ id: string } | null>;
   statusMessage?: { text: string; onRetry: () => void };
   preview?: boolean;
+  onPreviewNavigate?: (path: string) => void;
 };
 
-function getInitials(name: string) {
-  const initials = name
+function getInitials(name: string): string {
+  return name
     .trim()
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('');
-  return initials || <UserRound aria-hidden="true" />;
 }
 
 export function AppSidebar({
@@ -74,8 +75,17 @@ export function AppSidebar({
   onProjectCreate,
   statusMessage,
   preview = false,
+  onPreviewNavigate,
 }: AppSidebarProps) {
   const { theme, setTheme } = useTheme();
+  const { state, isMobile } = useSidebar();
+  const logoCollapsed = !preview && !isMobile && state === 'collapsed';
+
+  function handlePreviewClick(event: MouseEvent, path: string) {
+    if (!preview) return;
+    event.preventDefault();
+    onPreviewNavigate?.(path);
+  }
 
   return (
     <Sidebar
@@ -84,24 +94,14 @@ export function AppSidebar({
       className={preview ? 'hidden shrink-0 border-r border-sidebar-border md:flex' : undefined}
     >
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="Daylight">
-              <Link href="/dashboard">
-                <span
-                  aria-hidden="true"
-                  className="flex size-8 shrink-0 items-center justify-center"
-                >
-                  <LogoMark size={16} />
-                </span>
-                <span className="grid min-w-0 flex-1 text-left leading-tight">
-                  <span className="truncate text-sm font-medium">Daylight</span>
-                  <span className="truncate text-xs text-sidebar-foreground/70">Workspace</span>
-                </span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <Link
+          href="/dashboard"
+          aria-label="Daylight"
+          onClick={(event) => handlePreviewClick(event, '/dashboard')}
+          className="flex h-12 w-full items-center rounded-md px-2 ring-sidebar-ring outline-hidden transition-colors hover:bg-sidebar-accent/55 focus-visible:ring-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+        >
+          <Logo size="sidebar" collapsed={logoCollapsed} />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent role="navigation" aria-label="Workspace">
@@ -115,12 +115,32 @@ export function AppSidebar({
         )}
 
         <SidebarGroup>
+          <SidebarGroupLabel>AI</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={activePath === '/daylight'} tooltip="Daylight AI">
+                  <Link
+                    href="/daylight"
+                    data-preview-target={preview ? 'daylight' : undefined}
+                    onClick={(event) => handlePreviewClick(event, '/daylight')}
+                  >
+                    <Sparkles aria-hidden="true" />
+                    <span>Daylight</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={activePath === '/dashboard'} tooltip="Dashboard">
-                  <Link href="/dashboard">
+                  <Link href="/dashboard" onClick={(event) => handlePreviewClick(event, '/dashboard')}>
                     <LayoutDashboard aria-hidden="true" />
                     <span>Dashboard</span>
                   </Link>
@@ -128,7 +148,7 @@ export function AppSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={activePath === '/projects'} tooltip="Projects">
-                  <Link href="/projects">
+                  <Link href="/projects" onClick={(event) => handlePreviewClick(event, '/projects')}>
                     <FolderKanban aria-hidden="true" />
                     <span>All projects</span>
                   </Link>
@@ -152,14 +172,18 @@ export function AppSidebar({
           />
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects.map((project) => (
+              {projects.map((project, index) => (
                 <SidebarMenuItem key={project.id}>
                   <SidebarMenuButton
                     asChild
                     isActive={activeProjectId === project.id}
                     tooltip={project.name}
                   >
-                    <Link href={`/projects/${encodeURIComponent(project.id)}`}>
+                    <Link
+                      href={`/projects/${encodeURIComponent(project.id)}`}
+                      data-preview-target={preview && index === 0 ? 'project' : undefined}
+                      onClick={(event) => handlePreviewClick(event, `/projects/${project.id}`)}
+                    >
                       <span
                         data-project-color={project.color}
                         className="project-color-dot size-2.5 shrink-0 rounded-full"
@@ -181,7 +205,19 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        {!preview && userEmail && (
+        {preview ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton tabIndex={-1} tooltip={userName} className="pointer-events-none">
+                <Avatar size="sm">
+                  <AvatarFallback>{getInitials(userName) || <UserRound aria-hidden="true" />}</AvatarFallback>
+                </Avatar>
+                <span className="truncate group-data-[collapsible=icon]:hidden">{userName}</span>
+                <ChevronsUpDown aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        ) : userEmail ? (
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -191,9 +227,10 @@ export function AppSidebar({
                     tooltip={userName}
                   >
                     <Avatar size="sm">
-                      <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(userName) || <UserRound aria-hidden="true" />}</AvatarFallback>
                     </Avatar>
                     <span className="truncate group-data-[collapsible=icon]:hidden">{userName}</span>
+                    <ChevronsUpDown aria-hidden="true" className="ml-auto size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="start" className="w-56">
@@ -243,8 +280,7 @@ export function AppSidebar({
               </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
-        )}
-        <SidebarSeparator className="mx-0" />
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );

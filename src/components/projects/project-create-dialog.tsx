@@ -79,7 +79,7 @@ export function ProjectCreateDialog({ projects, trigger, onCreate }: ProjectCrea
             </Select>
           </div>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <DialogFooter className="border-t border-border pt-4">
+          <DialogFooter className="pt-4">
             <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit" size="sm" disabled={!name.trim() || saving}>{saving ? 'Creating…' : 'Create project'}</Button>
           </DialogFooter>

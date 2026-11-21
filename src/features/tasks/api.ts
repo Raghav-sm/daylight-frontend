@@ -1,10 +1,6 @@
 import { request } from '@/lib/api-client';
 import type { Task, TaskDraft, TaskSummary, TaskUpdatePayload } from '@/features/tasks/types';
 
-function jsonBody(value: unknown): RequestInit {
-  return { body: JSON.stringify(value) };
-}
-
 export const tasksApi = {
   getById(id: string, signal?: AbortSignal) {
     return request<Task>(`/tasks/${encodeURIComponent(id)}`, { signal });
@@ -22,14 +18,14 @@ export const tasksApi = {
     void draftProjectId;
     return request<Task>(`/projects/${encodeURIComponent(projectId)}/tasks`, {
       method: 'POST',
-      ...jsonBody(taskData),
+      body: taskData,
     });
   },
 
   update(taskId: string, payload: TaskUpdatePayload) {
     return request<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
       method: 'PATCH',
-      ...jsonBody(payload),
+      body: payload,
     });
   },
 

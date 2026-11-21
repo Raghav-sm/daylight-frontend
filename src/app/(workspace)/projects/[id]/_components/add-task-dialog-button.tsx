@@ -190,7 +190,7 @@ export default function AddTaskDialogButton({
               </Select>
             </div>
           </div>
-          <DialogFooter className="mt-4 shrink-0 border-t border-border pt-4">
+          <DialogFooter className="mt-4 shrink-0 pt-4">
             <Button type="button" variant="secondary" size="sm" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>

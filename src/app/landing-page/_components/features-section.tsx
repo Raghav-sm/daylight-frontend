@@ -1,6 +1,6 @@
 import { SectionFrame } from './section-frame';
 import { AssistantChatMockup } from './features/assistant-chat-mockup';
-import { BoardPreview } from './features/board-preview';
+import KanbanDemoModern from '@/components/ui/kanban-2';
 
 export function FeaturesSection() {
   return (
@@ -16,7 +16,7 @@ export function FeaturesSection() {
       </div>
 
       <div className="mt-12">
-        <BoardPreview />
+        <KanbanDemoModern />
       </div>
       <div className="mt-10 grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div className="max-w-md">

@@ -3,39 +3,59 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { projectKeys } from '@/features/projects/data';
 import { tasksApi } from '@/features/tasks/api';
-import type { TaskDraft, TaskUpdatePayload } from '@/features/tasks/types';
+import type { TaskDraft, TaskSummary, TaskUpdatePayload } from '@/features/tasks/types';
 
 export const taskKeys = {
-  all: ['tasks'] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
-  projectSummaries: (projectId: string) =>
-    [...taskKeys.all, 'projectSummaries', projectId] as const,
+  byId: (id: string) => ['tasks', id],
+  byProject: (projectId: string) => ['tasks', 'project', projectId],
 };
 
-export function useTaskDetail(id: string | undefined) {
+type CreateTaskInput = {
+  projectId: string;
+  draft: TaskDraft;
+};
+
+type UpdateTaskInput = {
+  taskId: string;
+  payload: TaskUpdatePayload;
+  sourceProjectId?: string;
+};
+
+type MoveTaskStageInput = {
+  taskId: string;
+  projectId: string;
+  stageId: string;
+};
+
+type DeleteTaskInput = {
+  taskId: string;
+  projectId: string;
+};
+
+export function useTask(id: string | undefined) {
   return useQuery({
-    queryKey: taskKeys.detail(id ?? ''),
+    queryKey: taskKeys.byId(id ?? ''),
     queryFn: ({ signal }) => tasksApi.getById(id!, signal),
     enabled: Boolean(id),
   });
 }
 
-export function useProjectTaskSummaries(projectId: string | undefined) {
+export function useProjectTasks(projectId: string | undefined) {
   return useQuery({
-    queryKey: taskKeys.projectSummaries(projectId ?? ''),
+    queryKey: taskKeys.byProject(projectId ?? ''),
     queryFn: ({ signal }) => tasksApi.getProjectSummaries(projectId!, signal),
     enabled: Boolean(projectId),
   });
 }
 
-function invalidateTaskListCaches(
+function invalidateTaskLists(
   queryClient: ReturnType<typeof useQueryClient>,
   projectIds: string[],
 ) {
-  queryClient.invalidateQueries({ queryKey: projectKeys.summaries() });
+  queryClient.invalidateQueries({ queryKey: projectKeys.list() });
   for (const projectId of projectIds) {
     if (projectId) {
-      queryClient.invalidateQueries({ queryKey: taskKeys.projectSummaries(projectId) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.byProject(projectId) });
     }
   }
 }
@@ -43,11 +63,11 @@ function invalidateTaskListCaches(
 export function useCreateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectId, draft }: { projectId: string; draft: TaskDraft }) =>
-      tasksApi.create(projectId, draft),
+    mutationFn: (input: CreateTaskInput) => tasksApi.create(input.projectId, input.draft),
     onSuccess: (task) => {
-      queryClient.setQueryData(taskKeys.detail(task.id), task);
-      invalidateTaskListCaches(queryClient, [task.projectId]);
+      const taskCacheKey = taskKeys.byId(task.id);
+      queryClient.setQueryData(taskCacheKey, task);
+      invalidateTaskLists(queryClient, [task.projectId]);
     },
   });
 }
@@ -55,21 +75,20 @@ export function useCreateTask() {
 export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (vars: {
-      taskId: string;
-      payload: TaskUpdatePayload;
-      sourceProjectId?: string;
-    }) => tasksApi.update(vars.taskId, vars.payload),
-    onSuccess: (task, variables) => {
-      queryClient.setQueryData(taskKeys.detail(task.id), task);
-      const projectIds = new Set<string>();
-      if (variables.sourceProjectId) projectIds.add(variables.sourceProjectId);
-      if (task.projectId) projectIds.add(task.projectId);
-      if (variables.payload.projectId) projectIds.add(variables.payload.projectId);
-      invalidateTaskListCaches(queryClient, [...projectIds]);
-      if (task.projectId !== variables.sourceProjectId && variables.sourceProjectId) {
-        queryClient.invalidateQueries({ queryKey: projectKeys.detail(task.projectId) });
-        queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.sourceProjectId) });
+    mutationFn: (input: UpdateTaskInput) => tasksApi.update(input.taskId, input.payload),
+    onSuccess: (task, input) => {
+      const taskCacheKey = taskKeys.byId(task.id);
+      queryClient.setQueryData(taskCacheKey, task);
+
+      const affectedProjects = new Set<string>();
+      if (input.sourceProjectId) affectedProjects.add(input.sourceProjectId);
+      if (task.projectId) affectedProjects.add(task.projectId);
+      if (input.payload.projectId) affectedProjects.add(input.payload.projectId);
+      invalidateTaskLists(queryClient, [...affectedProjects]);
+
+      if (input.sourceProjectId && task.projectId !== input.sourceProjectId) {
+        queryClient.invalidateQueries({ queryKey: projectKeys.byId(task.projectId) });
+        queryClient.invalidateQueries({ queryKey: projectKeys.byId(input.sourceProjectId) });
       }
     },
   });
@@ -78,11 +97,35 @@ export function useUpdateTask() {
 export function useMoveTaskStage() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ taskId, stageId }: { taskId: string; stageId: string }) =>
-      tasksApi.update(taskId, { stageId }),
+    mutationFn: (input: MoveTaskStageInput) => tasksApi.update(input.taskId, { stageId: input.stageId }),
+
+    onMutate: async (input) => {
+      const boardCacheKey = taskKeys.byProject(input.projectId);
+      await queryClient.cancelQueries({ queryKey: boardCacheKey });
+
+      const previousTasks = queryClient.getQueryData<TaskSummary[]>(boardCacheKey);
+
+      queryClient.setQueryData<TaskSummary[]>(boardCacheKey, (current = []) =>
+        current.map((task) => (task.id === input.taskId ? { ...task, stageId: input.stageId } : task)),
+      );
+
+      return { previousTasks };
+    },
+
+    onError: (_error, input, context) => {
+      if (context?.previousTasks) {
+        const boardCacheKey = taskKeys.byProject(input.projectId);
+        queryClient.setQueryData(boardCacheKey, context.previousTasks);
+      }
+    },
+
     onSuccess: (task) => {
-      queryClient.setQueryData(taskKeys.detail(task.id), task);
-      invalidateTaskListCaches(queryClient, [task.projectId]);
+      const taskCacheKey = taskKeys.byId(task.id);
+      queryClient.setQueryData(taskCacheKey, task);
+    },
+
+    onSettled: (_data, _error, input) => {
+      invalidateTaskLists(queryClient, [input.projectId]);
     },
   });
 }
@@ -90,11 +133,11 @@ export function useMoveTaskStage() {
 export function useDeleteTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { taskId: string; projectId: string }) =>
-      tasksApi.delete(vars.taskId),
-    onSuccess: (_data, { taskId, projectId }) => {
-      queryClient.removeQueries({ queryKey: taskKeys.detail(taskId) });
-      invalidateTaskListCaches(queryClient, [projectId]);
+    mutationFn: (input: DeleteTaskInput) => tasksApi.delete(input.taskId),
+    onSuccess: (_data, input) => {
+      const taskCacheKey = taskKeys.byId(input.taskId);
+      queryClient.removeQueries({ queryKey: taskCacheKey });
+      invalidateTaskLists(queryClient, [input.projectId]);
     },
   });
 }

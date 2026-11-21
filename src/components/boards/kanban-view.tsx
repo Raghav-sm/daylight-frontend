@@ -1,16 +1,33 @@
 import type { ReactNode } from 'react';
-import { Circle, CircleCheck, CircleDot, CircleEllipsis } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import type { ProjectStage } from '@/features/projects/types';
 import { cn } from '@/lib/utils';
 
-const tones = ['muted', 'orange', 'violet', 'blue'] as const;
-function ToneIcon({ index }: { index: number }) {
-  const Icon = [Circle, CircleDot, CircleEllipsis, CircleCheck][index % 4];
-  return <Icon aria-hidden="true" className="size-4 shrink-0" />;
+export function BoardSurface({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('flex min-h-[60vh] items-start gap-3 overflow-x-auto pb-4', className)}>{children}</div>;
 }
 
-export function BoardSurface({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('flex min-h-[60vh] items-start gap-4 overflow-x-auto pb-4', className)}>{children}</div>;
+export function KanbanStageHeader({
+  title,
+  count,
+  action,
+}: {
+  title: string;
+  count: string | number;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="kanban-stage-header mb-1 rounded-2xl px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="kanban-stage-dot size-2 shrink-0 rounded-full" />
+        <h2 className="truncate text-base font-semibold text-foreground">{title}</h2>
+        <Badge variant="outline" className="kanban-stage-count rounded-full px-2.5 py-0.5 text-xs tabular-nums">
+          {count}
+        </Badge>
+        {action && <div className="ml-auto">{action}</div>}
+      </div>
+    </header>
+  );
 }
 
 export function StageColumnFrame({ stage, stageIndex, taskCount, children, footer, dropRef, dropActive = false, className }: {
@@ -24,9 +41,18 @@ export function StageColumnFrame({ stage, stageIndex, taskCount, children, foote
   className?: string;
 }) {
   return (
-    <section data-kanban-tone={tones[stageIndex % 4]} aria-label={`${stage.name} stage`} className={cn('kanban-column flex w-72 shrink-0 flex-col gap-2 rounded-2xl border p-2', className)}>
-      <div className="flex items-center gap-2 px-2 py-1.5"><div className="kanban-column-title flex min-w-0 flex-1 items-center gap-2"><ToneIcon index={stageIndex} /><h3 className="truncate text-sm font-medium">{stage.name}</h3><span className="kanban-count shrink-0 rounded-full border px-2 py-0.5 text-xs tabular-nums">{String(taskCount).padStart(2, '0')}</span></div></div>
-      <div ref={dropRef} className={cn('flex min-h-32 flex-1 flex-col gap-2', dropActive && 'rounded-xl ring-2 ring-ring/40')}>{children}</div>
+    <section
+      data-kanban-stage-color={stageIndex % 6}
+      aria-label={`${stage.name} stage`}
+      className={cn('kanban-stage-column flex w-[14rem] shrink-0 flex-col gap-2 rounded-2xl p-2.5 shadow-sm lg:w-[18rem]', className)}
+    >
+      <KanbanStageHeader title={stage.name} count={String(taskCount).padStart(2, '0')} />
+      <div
+        ref={dropRef}
+        className={cn('flex min-h-[18rem] flex-1 flex-col gap-2.5', dropActive && 'rounded-xl ring-2 ring-ring/40')}
+      >
+        {children}
+      </div>
       {footer}
     </section>
   );

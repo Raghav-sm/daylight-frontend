@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { LogoMark } from '@/components/layout/logo-mark';
+import { Logo } from '@/components/layout/logo';
 import { ThemeMenu } from '@/components/layout/theme-menu';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/features/auth/data';
@@ -32,8 +32,7 @@ export function LandingHeader() {
     <header className={cn('sticky top-0 z-40 border-b transition-colors duration-300', scrolled ? 'border-border bg-background/95 backdrop-blur-sm' : 'border-transparent bg-transparent')}>
       <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-3 px-5 py-4 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:px-10">
         <Link href="/landing-page" className="flex items-center gap-2 pl-1">
-          <LogoMark size={20} />
-          <span className="font-heading text-lg font-[600] tracking-tight">Daylight</span>
+          <Logo size="sidebar" />
         </Link>
 
         <nav className="hidden items-center gap-6 justify-self-center text-[15px] font-[600] text-foreground lg:flex">

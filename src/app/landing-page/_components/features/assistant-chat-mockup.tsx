@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { ArrowUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LogoMark } from '@/components/layout/logo-mark';
+import { LogoIcon } from '@/components/layout/logo';
 import styles from '../features-section.module.css';
 
 const firstPrompt = 'What’s still open for Product launch?';
@@ -23,7 +23,7 @@ const receiptAt = secondReplyAt + secondReply.length + 8;
 function AssistantMessage({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div className={`flex items-start gap-2.5 ${className}`}>
-      <span className="shrink-0"><LogoMark size={22} /></span>
+      <span className="shrink-0"><LogoIcon size={22} /></span>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium">Daylight assistant</p>
         <div className="mt-1 text-sm leading-relaxed">{children}</div>
@@ -88,7 +88,8 @@ export function AssistantChatMockup() {
         <AssistantMessage>Hey, how can I help you?</AssistantMessage>
 
         {tick >= firstSentAt && (
-          <div className={`${styles.chatMessage} ml-8 rounded-2xl bg-secondary px-4 py-3.5 text-sm leading-relaxed`}>
+          <div className={`${styles.chatMessage} ml-8 rounded-2xl rounded-br-md bg-secondary px-4 py-3.5 text-sm leading-relaxed`}>
+            <p className="mb-1 text-xs text-muted-foreground">@Product launch</p>
             {firstPrompt}
           </div>
         )}
@@ -106,7 +107,8 @@ export function AssistantChatMockup() {
         )}
 
         {tick >= secondSentAt && (
-          <div className={`${styles.chatMessage} ml-8 rounded-2xl bg-secondary px-4 py-3.5 text-sm leading-relaxed`}>
+          <div className={`${styles.chatMessage} ml-8 rounded-2xl rounded-br-md bg-secondary px-4 py-3.5 text-sm leading-relaxed`}>
+            <p className="mb-1 text-xs text-muted-foreground">@Product launch</p>
             {secondPrompt}
           </div>
         )}
@@ -131,18 +133,26 @@ export function AssistantChatMockup() {
         )}
       </div>
 
-      <div ref={composer} className="flex items-center gap-2 rounded-2xl border border-border bg-background px-2 py-1 shadow-sm">
-        <Input
-          ref={input}
-          readOnly
-          value={draft}
-          placeholder="Ask Daylight about this project…"
-          aria-label="Ask Daylight about this project"
-          className="h-10 min-w-0 border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
-        />
-        <Button size="icon-sm" className="shrink-0 rounded-full" aria-label="Send message" disabled>
-          <ArrowUp />
-        </Button>
+      <div ref={composer} className="rounded-2xl border border-border bg-background px-2 pt-1 pb-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Input
+            ref={input}
+            readOnly
+            value={draft}
+            placeholder="Help me turn an idea into a plan…"
+            aria-label="Ask Daylight about this project"
+            className="h-10 min-w-0 border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+          />
+          <Button size="icon-sm" className="shrink-0 rounded-xl" aria-label="Send message" disabled>
+            <ArrowUp />
+          </Button>
+        </div>
+        <div className="mt-1 flex items-center gap-2 px-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-[11px] font-medium text-foreground">
+            <span data-project-color="orange" className="project-color-dot size-1.5 rounded-full" />
+            Product launch
+          </span>
+        </div>
       </div>
     </div>
   );

@@ -52,32 +52,32 @@
 
 .dark {
   color-scheme: dark;
-  --background: #1C1A16;
+  --background: #252322;
   --foreground: #F3ECDD;
-  --card: #2C2822;
+  --card: #3A3532;
   --card-foreground: #F3ECDD;
-  --popover: #2C2822;
+  --popover: #3A3532;
   --popover-foreground: #F3ECDD;
   --primary: #F3ECDD;
-  --primary-foreground: #1C1A16;
-  --secondary: #25221C;
+  --primary-foreground: #252322;
+  --secondary: #302D2B;
   --secondary-foreground: #F3ECDD;
-  --muted: #25221C;
-  --muted-foreground: #A39B88;
-  --accent: #25221C;
+  --muted: #302D2B;
+  --muted-foreground: #B5AAA0;
+  --accent: #302D2B;
   --accent-foreground: #F3ECDD;
   --destructive: #F28B7A;
   --destructive-soft: #3A2420;
-  --border: #3D382E;
-  --input: #3D382E;
+  --border: #4B4541;
+  --input: #4B4541;
   --ring: #F0B04F;
-  --sidebar: #25221C;
+  --sidebar: #302D2B;
   --sidebar-foreground: #F3ECDD;
   --sidebar-primary: #F3ECDD;
-  --sidebar-primary-foreground: #1C1A16;
-  --sidebar-accent: #35322C;
+  --sidebar-primary-foreground: #252322;
+  --sidebar-accent: #3A3532;
   --sidebar-accent-foreground: #F3ECDD;
-  --sidebar-border: #3D382E;
+  --sidebar-border: #4B4541;
   --sidebar-ring: #F0B04F;
   --stage-todo: #8A8372;
   --stage-progress: #F0B04F;
@@ -136,8 +136,8 @@
   --color-project-teal: var(--project-teal);
   --color-project-blue: var(--project-blue);
   --color-project-violet: var(--project-violet);
-  --font-heading: Fraunces, Georgia, serif;
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-heading: var(--font-inter), Inter, system-ui, sans-serif;
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) * 0.75);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) * 1.25);
@@ -194,16 +194,36 @@
     font-weight: 400;
   }
   .stage-drop-target { border: 1px solid color-mix(in srgb, var(--stage) 60%, var(--background)); }
+  [data-kanban-stage-color="0"] { --kanban-stage-accent: var(--stage-progress); }
+  [data-kanban-stage-color="1"] { --kanban-stage-accent: var(--stage-6); }
+  [data-kanban-stage-color="2"] { --kanban-stage-accent: var(--stage-done); }
+  [data-kanban-stage-color="3"] { --kanban-stage-accent: var(--stage-4); }
+  [data-kanban-stage-color="4"] { --kanban-stage-accent: var(--stage-5); }
+  [data-kanban-stage-color="5"] { --kanban-stage-accent: var(--stage-6); }
+  .kanban-stage-column {
+    background-color: color-mix(in srgb, var(--muted) 28%, var(--background));
+    border: 1px solid var(--border);
+  }
+  .kanban-stage-header {
+    background-color: color-mix(in srgb, var(--kanban-stage-accent) 17%, var(--background));
+  }
+  .kanban-stage-dot { background-color: var(--kanban-stage-accent); }
+  .kanban-stage-count {
+    color: color-mix(in srgb, var(--kanban-stage-accent) 72%, var(--foreground));
+    border-color: color-mix(in srgb, var(--kanban-stage-accent) 24%, var(--border));
+    background-color: color-mix(in srgb, var(--background) 88%, var(--kanban-stage-accent));
+  }
+  .kanban-stage-empty { border-color: color-mix(in srgb, var(--kanban-stage-accent) 35%, var(--border)); }
 }
 
 @layer base {
   * { @apply border-border outline-ring/50; }
   body {
     @apply bg-background text-foreground;
-    font-family: Inter, system-ui, sans-serif;
+    font-family: var(--font-inter), Inter, system-ui, sans-serif;
   }
   html { @apply font-sans; }
-  h1, h2, h3, h4, h5, h6 { font-family: Fraunces, Georgia, serif; font-weight: 500; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-inter), Inter, system-ui, sans-serif; font-weight: 500; }
 }
 
 @layer utilities {

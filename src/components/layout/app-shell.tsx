@@ -13,17 +13,18 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { useCreateProject, useProjectDetail, useProjectSummaries } from '@/features/projects/data';
+import { useCreateProject, useProject, useProjects } from '@/features/projects/data';
 import { useCurrentUser, useLogout } from '@/features/auth/data';
-import { useTaskDetail } from '@/features/tasks/data';
+import { useTask } from '@/features/tasks/data';
+import { TaskHeaderMenu } from '@/app/(workspace)/tasks/[taskId]/_components/task-header-menu';
 import type { ProjectColor } from '@/features/projects/types';
 
 function AppShellSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { id, taskId } = useParams<{ id?: string; taskId?: string }>();
-  const { data: summaries = [], isLoading, error, refetch } = useProjectSummaries();
-  const { data: task } = useTaskDetail(taskId);
+  const { data: summaries = [], isLoading, error, refetch } = useProjects();
+  const { data: task } = useTask(taskId);
   const createProject = useCreateProject();
   const currentUser = useCurrentUser();
   const logout = useLogout();
@@ -84,9 +85,9 @@ function AppShellSidebar() {
 function AppShellBreadcrumbs() {
   const pathname = usePathname();
   const { id, taskId } = useParams<{ id?: string; taskId?: string }>();
-  const { data: task } = useTaskDetail(taskId);
+  const { data: task } = useTask(taskId);
   const projectId = id ?? task?.projectId;
-  const { data: project } = useProjectDetail(projectId);
+  const { data: project } = useProject(projectId);
 
   if (pathname === '/dashboard') {
     return (
@@ -162,37 +163,40 @@ function AppShellBreadcrumbs() {
 
   if (pathname.startsWith('/tasks/') && taskId) {
     return (
-      <Breadcrumb className="min-w-0">
-        <BreadcrumbList className="flex-nowrap">
-          <BreadcrumbItem className="hidden md:inline-flex">
-            <BreadcrumbLink asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden md:block" />
-          <BreadcrumbItem className="hidden sm:inline-flex">
-            <BreadcrumbLink asChild>
-              <Link href="/projects">Projects</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator className="hidden sm:block" />
-          <BreadcrumbItem className="min-w-0 max-w-[10rem] sm:max-w-[14rem]">
-            {task?.projectId ? (
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <Breadcrumb className="min-w-0 flex-1">
+          <BreadcrumbList className="flex-nowrap">
+            <BreadcrumbItem className="hidden md:inline-flex">
               <BreadcrumbLink asChild>
-                <Link href={`/projects/${encodeURIComponent(task.projectId)}`} className="truncate">
-                  {project?.name ?? 'Project'}
-                </Link>
+                <Link href="/dashboard">Dashboard</Link>
               </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage className="truncate">{project?.name ?? 'Project'}</BreadcrumbPage>
-            )}
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="truncate">{task?.title ?? 'Task'}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden md:block" />
+            <BreadcrumbItem className="hidden sm:inline-flex">
+              <BreadcrumbLink asChild>
+                <Link href="/projects">Projects</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden sm:block" />
+            <BreadcrumbItem className="min-w-0 max-w-[10rem] sm:max-w-[14rem]">
+              {task?.projectId ? (
+                <BreadcrumbLink asChild>
+                  <Link href={`/projects/${encodeURIComponent(task.projectId)}`} className="truncate">
+                    {project?.name ?? 'Project'}
+                  </Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage className="truncate">{project?.name ?? 'Project'}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem className="min-w-0">
+              <BreadcrumbPage className="truncate">{task?.title ?? 'Task'}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <TaskHeaderMenu task={task} />
+      </div>
     );
   }
 

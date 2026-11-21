@@ -1,10 +1,6 @@
 import { request } from '@/lib/api-client';
 import type { Project, ProjectColor, ProjectStage, ProjectSummary } from '@/features/projects/types';
 
-function jsonBody(value: unknown): RequestInit {
-  return { body: JSON.stringify(value) };
-}
-
 export const projectsApi = {
   getSummaries(signal?: AbortSignal) {
     return request<ProjectSummary[]>('/projects/summary', { signal });
@@ -21,14 +17,14 @@ export const projectsApi = {
   create(name: string, color: ProjectColor) {
     return request<Project>('/projects', {
       method: 'POST',
-      ...jsonBody({ name, color }),
+      body: { name, color },
     });
   },
 
-  update(projectId: string, changes: { name?: string; color?: ProjectColor }) {
+  update(projectId: string, changes: { name?: string; color?: ProjectColor; initialStageId?: string; finalStageId?: string }) {
     return request<Project>(`/projects/${encodeURIComponent(projectId)}`, {
       method: 'PATCH',
-      ...jsonBody(changes),
+      body: changes,
     });
   },
 
@@ -39,7 +35,22 @@ export const projectsApi = {
   createStage(projectId: string, name: string, color: ProjectColor) {
     return request<ProjectStage>(`/projects/${encodeURIComponent(projectId)}/stages`, {
       method: 'POST',
-      ...jsonBody({ name, color }),
+      body: { name, color },
     });
+  },
+
+  reorderStages(projectId: string, stageIds: string[]) {
+    return request<Project>(`/projects/${encodeURIComponent(projectId)}/stages/order`, {
+      method: 'PUT',
+      body: { stageIds },
+    });
+  },
+
+  deleteStage(projectId: string, stageId: string, targetStageId?: string) {
+    const query = targetStageId ? `?target_stage_id=${encodeURIComponent(targetStageId)}` : '';
+    return request<void>(
+      `/projects/${encodeURIComponent(projectId)}/stages/${encodeURIComponent(stageId)}${query}`,
+      { method: 'DELETE' },
+    );
   },
 };

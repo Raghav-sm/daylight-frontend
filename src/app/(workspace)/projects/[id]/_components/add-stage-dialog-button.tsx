@@ -58,7 +58,7 @@ export default function AddStageDialogButton({ projectName, onCreate }: AddStage
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="secondary" size="sm">
+        <Button type="button" size="sm">
           <Plus aria-hidden="true" />
           Add stage
         </Button>
@@ -107,7 +107,7 @@ export default function AddStageDialogButton({ projectName, onCreate }: AddStage
               {error}
             </p>
           )}
-          <DialogFooter className="border-t border-border pt-4">
+          <DialogFooter className="pt-4">
             <Button type="button" variant="secondary" size="sm" onClick={closeDialog}>
               Cancel
             </Button>

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { ProjectCreateDialog } from '@/components/projects/project-create-dialog';
-import { useCreateProject, useProjectSummaries } from '@/features/projects/data';
+import { useCreateProject, useProjects } from '@/features/projects/data';
 import { Button } from '@/components/ui/button';
 import type { ProjectColor } from '@/features/projects/types';
 
@@ -17,7 +17,7 @@ export default function CreateProjectDialogButton({
   className,
 }: CreateProjectDialogButtonProps) {
   const router = useRouter();
-  const { data: summaries = [] } = useProjectSummaries();
+  const { data: summaries = [] } = useProjects();
   const createProject = useCreateProject();
 
   const projectsForUniqueness = summaries.map((item) => ({

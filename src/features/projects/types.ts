@@ -10,6 +10,8 @@ export type Project = {
   id: string;
   name: string;
   color: ProjectColor;
+  initialStageId: string | null;
+  finalStageId: string | null;
   stages: ProjectStage[];
 };
 

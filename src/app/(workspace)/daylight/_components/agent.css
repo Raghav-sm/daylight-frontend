@@ -1,0 +1,167 @@
+.daylight-agent {
+  position: relative;
+  isolation: isolate;
+  height: calc(100svh - 6.5rem);
+  min-height: 28rem;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+
+.daylight-agent-layout { height: 100%; min-height: 0; }
+.daylight-agent-history { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.daylight-agent-history-item { display: flex; width: 100%; align-items: flex-start; gap: 0.6rem; border-radius: 0.6rem; padding: 0.65rem 0.75rem; color: var(--muted-foreground); font-size: 0.8125rem; text-align: left; cursor: pointer; }
+.daylight-agent-history-item:hover, .daylight-agent-history-item[aria-current="page"] { background: var(--secondary); color: var(--foreground); }
+.daylight-agent-history-item:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.daylight-agent-main { display: flex; height: 100%; min-width: 0; min-height: 0; flex-direction: column; }
+.daylight-agent-toolbar { display: flex; min-height: 2.5rem; align-items: center; gap: 1rem; }
+.daylight-agent-start { min-height: 0; overflow-y: auto; padding: 0.5rem 0 1rem; }
+.daylight-agent-chat { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.daylight-agent-messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: 0.25rem; }
+.daylight-agent-chat-composer { flex: none; padding: 0.5rem 0 0.25rem; }
+
+.daylight-agent::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 -1rem;
+  pointer-events: none;
+  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 11%, transparent) 0.8px, transparent 0.8px);
+  background-size: 20px 20px;
+  mask-image: linear-gradient(transparent, black 12%, black 75%, transparent);
+}
+
+.daylight-agent-mark {
+  display: flex;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+}
+
+.daylight-agent-composer {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--stage-progress) 52%, var(--border));
+  border-radius: 1.25rem;
+  background: transparent;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.daylight-agent-composer::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -2;
+  border-radius: inherit;
+  background: linear-gradient(115deg, var(--stage-done), var(--stage-progress) 48%, var(--stage-6));
+  filter: blur(14px);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: daylight-agent-breathe 5s ease-in-out infinite;
+}
+
+.daylight-agent-composer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--card);
+  pointer-events: none;
+}
+
+.daylight-agent-composer:focus-within {
+  border-color: var(--stage-progress);
+}
+
+.daylight-agent-composer.is-active { border-color: var(--border); box-shadow: none; }
+.daylight-agent-composer.is-active:focus-within { border-color: var(--ring); }
+.daylight-agent-composer.is-active::before { content: none; animation: none; }
+
+.daylight-agent-input {
+  display: block;
+  height: 4.5rem;
+  min-height: 4.5rem;
+  max-height: 18rem;
+  resize: none;
+  border: 0;
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 0.75rem 1rem 0.25rem;
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.daylight-agent-input:focus-visible {
+  box-shadow: none;
+  outline: none;
+}
+
+.daylight-agent-template {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--project-color) 22%, var(--border));
+  border-radius: 0.875rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--project-color) 9%, var(--card)), var(--card) 65%);
+  box-shadow: 0 2px 3px color-mix(in srgb, var(--foreground) 3%, transparent), 0 6px 16px -10px color-mix(in srgb, var(--project-color) 24%, transparent);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.daylight-agent-template-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.daylight-agent-template-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  color: color-mix(in srgb, var(--project-color) 65%, var(--foreground));
+  background: color-mix(in srgb, var(--project-color) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--project-color) 18%, transparent);
+}
+
+.daylight-agent-template-arrow {
+  color: var(--muted-foreground);
+  transition: transform 180ms ease, color 180ms ease;
+}
+
+.daylight-agent-template:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--project-color) 60%, var(--border));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.daylight-agent-template:hover .daylight-agent-template-arrow {
+  color: var(--foreground);
+  transform: translate(2px, -2px);
+}
+
+.daylight-agent-template:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+@keyframes daylight-agent-breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.995); }
+  50% { opacity: 0.65; transform: scale(1.012); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daylight-agent-composer::before { animation: none; opacity: 0.4; }
+  .daylight-agent-template { transition: none; }
+  .daylight-agent-template:hover { transform: none; }
+  .daylight-agent-template-arrow { transition: none; }
+  .daylight-agent-template:hover .daylight-agent-template-arrow { transform: none; }
+}

@@ -1,51 +1,71 @@
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ProjectSummary } from '@/features/projects/types';
+import { ProjectFolderCard } from './project-folder-card';
 
-export function ProjectCards({ projects }: { projects: ProjectSummary[] }) {
+type ProjectCardsProps = {
+  projects?: ProjectSummary[];
+  isLoading?: boolean;
+  loadingCount?: number;
+  error?: unknown;
+  onRetry?: () => void;
+  emptyMessage?: ReactNode;
+};
+
+export function ProjectCards({
+  projects = [],
+  isLoading = false,
+  loadingCount = 4,
+  error,
+  onRetry,
+  emptyMessage = 'No projects yet.',
+}: ProjectCardsProps) {
+  if (isLoading) {
+    return (
+      <div aria-label="Loading projects" className="grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: loadingCount }, (_, index) => (
+          <div key={`loading-card-${index}`} className="project-folder">
+            <span className="project-folder-tab" aria-hidden="true" />
+            <div className="project-folder-surface">
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    const message = error instanceof Error ? error.message : 'Could not load projects.';
+    return (
+      <div
+        role="alert"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive"
+      >
+        <span>{message}</span>
+        {onRetry && (
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+            Retry
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <Card className="rounded-xl px-6 py-12 text-center text-sm text-muted-foreground">
+        {emptyMessage}
+      </Card>
+    );
+  }
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {projects.map((project) => {
-        const taskCount = project.taskCount;
-        const stageCount = project.stageCount;
-        return (
-          <Link
-            key={project.id}
-            href={`/projects/${encodeURIComponent(project.id)}`}
-            className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card
-              data-project-color={project.color}
-              className="gap-3 rounded-xl px-4 py-3.5 transition-colors group-hover:border-foreground/30 group-hover:bg-secondary/40"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span aria-hidden="true" className="project-color-dot size-2.5 shrink-0 rounded-full" />
-                  <h3 className="font-heading truncate text-base">{project.name}</h3>
-                </div>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {taskCount} {taskCount === 1 ? 'task' : 'tasks'} <span aria-hidden="true">·</span> {stageCount}{' '}
-                {stageCount === 1 ? 'stage' : 'stages'}
-              </p>
-              <div className="flex h-1.5 gap-1" aria-label={`${stageCount} stages`}>
-                {Array.from({ length: stageCount }, (_, index) => (
-                  <span
-                    key={`${project.id}-stage-${index}`}
-                    data-stage-color={index < 3 ? index : 3 + ((index - 3) % 3)}
-                    className="min-w-0 flex-1 rounded-[3px] bg-[var(--stage)]"
-                  />
-                ))}
-              </div>
-            </Card>
-          </Link>
-        );
-      })}
+    <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {projects.map((project) => <ProjectFolderCard key={project.id} project={project} />)}
     </div>
   );
 }

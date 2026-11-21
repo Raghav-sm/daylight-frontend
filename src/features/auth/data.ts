@@ -5,7 +5,7 @@ import { authApi } from '@/features/auth/api';
 import type { LoginCredentials, RegistrationCredentials, ProfileUpdate } from '@/features/auth/types';
 
 export const authKeys = {
-  currentUser: ['auth', 'current-user'] as const,
+  currentUser: ['auth', 'current-user'],
 };
 
 export function useCurrentUser() {
