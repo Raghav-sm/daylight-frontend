@@ -2,16 +2,20 @@
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AuthBrand } from '@/components/auth/auth-brand';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 import { ApiError } from '@/lib/api-client';
+import { getApiBaseUrl } from '@/lib/api-client';
+import { getGoogleAuthErrorMessage } from '@/features/auth/api';
 import { useLogin } from '@/features/auth/data';
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useLogin();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,39 +24,62 @@ export function LoginForm() {
     event.preventDefault();
     try {
       await login.mutateAsync({ email, password });
-      router.replace('/dashboard');
+      const continuation = searchParams.get('oauth_continue');
+      if (continuation) {
+        window.location.assign(`${getApiBaseUrl()}/oauth/continue?request=${encodeURIComponent(continuation)}`);
+      } else {
+        router.replace('/dashboard');
+      }
     } catch {
       // The mutation error is shown below.
     }
   }
 
+  const googleError = getGoogleAuthErrorMessage(searchParams.get('google_error'));
   const error = login.error instanceof ApiError ? login.error.message : 'Could not sign in. Try again.';
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-sm">
         <CardContent>
-          <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="grid gap-4">
             <div className="grid justify-items-center gap-2 pb-1">
               <AuthBrand />
               <CardTitle className="text-center text-xl">Welcome back</CardTitle>
               <CardDescription className="text-center">Sign in to open your Daylight workspace.</CardDescription>
             </div>
-            <div className="grid gap-2">
-              <label htmlFor="email" className="text-sm font-medium">Email</label>
-              <Input id="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
+
+            {googleError && (
+              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {googleError}
+              </p>
+            )}
+
+            <GoogleAuthButton originPage="login" oauthContinue={searchParams.get('oauth_continue')} disabled={login.isPending} />
+
+            <div className="relative flex items-center py-0.5">
+              <span className="w-full border-t border-border" />
+              <span className="shrink-0 px-3 text-xs text-muted-foreground">or</span>
+              <span className="w-full border-t border-border" />
             </div>
-            <div className="grid gap-2">
-              <label htmlFor="password" className="text-sm font-medium">Password</label>
-              <Input id="password" type="password" autoComplete="current-password" required minLength={12} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} />
-            </div>
-            {login.isError && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={login.isPending}>
-              {login.isPending ? 'Signing in…' : 'Sign in'}
-            </Button>
-          </form>
+
+            <form className="grid gap-4" onSubmit={handleSubmit}>
+              <div className="grid gap-2">
+                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <Input id="email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <Input id="password" type="password" autoComplete="current-password" required minLength={12} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} />
+              </div>
+              {login.isError && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              <Button type="submit" disabled={login.isPending}>
+                {login.isPending ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+          </div>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            New to Daylight? <Link href="/register" className="font-medium text-foreground underline-offset-4 hover:underline">Create an account</Link>
+            New to Daylight? <Link href={searchParams.get('oauth_continue') ? `/register?oauth_continue=${encodeURIComponent(searchParams.get('oauth_continue')!)}` : '/register'} className="font-medium text-foreground underline-offset-4 hover:underline">Create an account</Link>
           </p>
         </CardContent>
       </Card>
